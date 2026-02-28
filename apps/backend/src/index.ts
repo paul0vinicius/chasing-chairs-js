@@ -16,6 +16,14 @@ interface PlayerData {
 
 const players: Record<string, PlayerData> = {};
 
+let chairActive = false;
+let chairPosition = { x: -1, y: -1 };
+const mapWidth = 8;
+const mapHeight = 5;
+const walls = [
+  {x: 2, y: 2}, {x: 3, y: 2}, {x: 5, y: 2}, {x: 5, y: 3} // Match your MainScene mapData 1s
+];
+
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
@@ -50,10 +58,55 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('playerMoved', { id: socket.id, direction });
   });
 
+  // Inside your io.on('connection') block:
+  socket.on('playerSat', () => {
+    if (chairActive) {
+      console.log(`Player ${socket.id} won the round!`);
+      
+      // 1. End current round
+      chairActive = false;
+      chairPosition = { x: -1, y: -1 };
+
+      // 2. Tell everyone the chair is GONE (so they hide the sprite)
+      io.emit('chairTaken', { winnerId: socket.id });
+
+      // 3. START THE NEXT ROUND AUTOMATICALLY
+      spawnChair();
+    }
+  });
+
   socket.on('disconnect', () => {
     delete players[socket.id];
     io.emit('playerDisconnected', socket.id);
   });
 });
+
+function spawnChair() {
+  if (chairActive) return; // Prevent multiple chairs spawning at once
+
+  // Random delay between 2 and 5 seconds
+  const delay = Math.floor(Math.random() * 3000) + 2000;
+
+  setTimeout(() => {
+    // 1. Calculate random position (avoiding walls)
+    let rx: number = -1, ry: number = -1
+    let isWall = true;
+    while (isWall) {
+      rx = Math.floor(Math.random() * (mapWidth - 2)) + 1;
+      ry = Math.floor(Math.random() * (mapHeight - 2)) + 1;
+      isWall = walls.some(w => w.x === rx && w.y === ry);
+    }
+
+    chairPosition = { x: rx, y: ry };
+    chairActive = true;
+
+    // 2. Tell everyone the chair is live
+    io.emit('chairSpawned', chairPosition);
+    console.log(`Chair spawned at ${rx}, ${ry}`);
+  }, delay);
+}
+
+// Start the first cycle when the server starts or when someone joins
+spawnChair();
 
 server.listen(3001, () => console.log('TS Backend running on port 3001'));

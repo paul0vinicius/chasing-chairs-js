@@ -8,6 +8,8 @@ export class MainScene extends Scene {
   private gridEngine!: GridEngine;
   private socket!: Socket;
   private remotePlayers: { [key: string]: Phaser.GameObjects.Sprite } = {};
+  private currentChairSprite: Phaser.GameObjects.Sprite | null = null;
+  private currentChairPos = { x: -1, y: -1 };
 
   constructor() {
     super('MainScene');
@@ -41,6 +43,22 @@ export class MainScene extends Scene {
     const playerSprite = this.add.sprite(0, 0, 'playerTexture').setOrigin(0);
     this.gridEngine.create(map, {
       characters: [{ id: 'player1', sprite: playerSprite, startPosition: { x: 1, y: 1 } }],
+    });
+
+    this.gridEngine.movementStopped().subscribe(({ charId }) => {
+        // Use 'this.currentChairPos' instead of the undefined 'chairPosition'
+        if (charId === 'player1' && this.currentChairPos.x !== -1) {
+            const pos = this.gridEngine.getPosition('player1');
+            
+            if (pos.x === this.currentChairPos.x && pos.y === this.currentChairPos.y) {
+                this.socket.emit('playerSat', { id: this.socket.id });
+                (this.gridEngine.getSprite('player1') as any).setTint(0xffff00);
+                console.log("I GOT THE CHAIR!");
+                
+                // Optional: Reset chair pos so you can't "sit" on it twice
+                this.currentChairPos = { x: -1, y: -1 };
+            }
+        }
     });
 
     // 2. ONLY NOW connect to the socket
@@ -84,11 +102,42 @@ export class MainScene extends Scene {
     });
 
     this.socket.on('playerDisconnected', (id: string) => {
-      if (this.remotePlayers[id]) {
-        this.gridEngine.removeCharacter(id);
-        this.remotePlayers[id].destroy();
-        delete this.remotePlayers[id];
-      }
+          if (this.remotePlayers[id]) {
+            this.gridEngine.removeCharacter(id);
+            this.remotePlayers[id].destroy();
+            delete this.remotePlayers[id];
+          }
+        });
+
+        this.socket.on('chairSpawned', (pos: { x: number, y: number }) => {
+        // 1. Update the class state so 'movementStopped' can see it
+        this.currentChairPos = pos;
+
+        // 2. Visuals: Remove old chair if it exists
+        if (this.currentChairSprite) this.currentChairSprite.destroy();
+
+        // 3. Create and position the new chair
+        this.currentChairSprite = this.add.sprite(pos.x * 32, pos.y * 32, 'chairTexture').setOrigin(0);
+
+        console.log("A chair appeared!");
+    });
+
+    this.socket.on('chairTaken', (data: { winnerId: string }) => {
+        console.log(`Round ended! Winner: ${data.winnerId}`);
+
+        // 1. Remove the chair sprite from the screen
+        if (this.currentChairSprite) {
+            this.currentChairSprite.destroy();
+            this.currentChairSprite = null;
+        }
+
+        // 2. Reset the local coordinate check
+        this.currentChairPos = { x: -1, y: -1 };
+
+        // 3. Visual feedback: if I didn't win, clear my tint (or vice versa)
+        if (data.winnerId !== this.socket.id) {
+            (this.gridEngine.getSprite('player1') as any).clearTint();
+        }
     });
   }
 

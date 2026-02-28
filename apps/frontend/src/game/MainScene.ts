@@ -2,6 +2,8 @@ import { Scene } from 'phaser';
 import { io, Socket } from 'socket.io-client';
 import { GridEngine, Direction } from 'grid-engine';
 
+const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+
 export class MainScene extends Scene {
   private gridEngine!: GridEngine;
   private socket!: Socket;
@@ -43,12 +45,12 @@ export class MainScene extends Scene {
 
     // 2. ONLY NOW connect to the socket
     // This ensures all systems are hot before a single byte comes from the network
-    this.socket = io('http://localhost:3001', {
+    this.socket = io(socketUrl, {
         reconnection: false // Prevent ghost reconnections during dev
     });
 
     this.events.once('create', () => {
-        this.socket = io('http://localhost:3001');
+        this.socket = io(socketUrl);
         this.setupSocketListeners();
         console.log("Scene and Factory are 100% ready. Connecting sockets...");
     });

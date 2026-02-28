@@ -9,10 +9,19 @@
   "scripts": {
     "dev:frontend": "npm run dev --workspace=apps/frontend",
     "dev:backend": "npm run dev --workspace=apps/backend",
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\""
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "prepare": "husky",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix && prettier --write .",
+    "format": "prettier --write ."
   },
   "devDependencies": {
     "concurrently": "^8.2.0",
+    "eslint": "^10.0.2",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.3.0",
+    "prettier": "^3.8.1",
     "typescript": "^5.0.0"
   },
   "author": "Paulo Soares",

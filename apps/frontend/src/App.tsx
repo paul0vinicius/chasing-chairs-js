@@ -1,44 +1,48 @@
-import { useEffect, useRef } from 'react';
-import Phaser from 'phaser';
-import { MainScene } from './game/MainScene';
-import { GridEngine } from 'grid-engine';
+import { useState } from 'react';
+import GameComponent from './game/GameComponent';
 
-export const GameComponent = () => {
-  const gameContainerRef = useRef<HTMLDivElement>(null);
-  const gameInstance = useRef<Phaser.Game | null>(null);
+const App = () => {
+  const [hasStarted, setHasStarted] = useState(false);
 
-  useEffect(() => {
-    // ONLY initialize if the game doesn't exist yet
-    if (gameContainerRef.current && !gameInstance.current) {
-      gameInstance.current = new Phaser.Game({
-        type: Phaser.AUTO,
-        parent: gameContainerRef.current,
-        width: 800,
-        height: 600,
-        backgroundColor: '#1a1a1a',
-        scene: [MainScene],
-        plugins: {
-          scene: [
-            {
-              key: 'gridEngine',
-              plugin: GridEngine,
-              mapping: 'gridEngine',
-            },
-          ],
-        },
-      });
-    }
+  const handleStart = () => {
+    setHasStarted(true);
+  };
 
-    // Cleanup: Destroy the game when the component unmounts
-    return () => {
-      if (gameInstance.current) {
-        gameInstance.current.destroy(true);
-        gameInstance.current = null;
-      }
-    };
-  }, []);
+  return (
+    <div style={{ width: '100vw', height: '100vh', backgroundColor: '#111', overflow: 'hidden' }}>
+      {!hasStarted ? (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100%',
+          color: 'white',
+          fontFamily: 'sans-serif'
+        }}>
+          <h1 style={{ marginBottom: '20px' }}>🎶 Musical Chairs Online</h1>
+          <button 
+            onClick={handleStart}
+            style={{
+              padding: '15px 40px',
+              fontSize: '20px',
+              cursor: 'pointer',
+              backgroundColor: '#e74c3c',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 'bold'
+            }}
+          >
+            JOIN GAME
+          </button>
+          <p style={{ marginTop: '20px', opacity: 0.6 }}>Tap to enable audio</p>
+        </div>
+      ) : (
+        <GameComponent />
+      )}
+    </div>
+  );
+};
 
-  return <div ref={gameContainerRef} id="game-container" />;
-}
-
-export default GameComponent;
+export default App;

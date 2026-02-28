@@ -17,83 +17,83 @@ export class MainScene extends Scene {
   }
 
   private createResetButton() {
-      // Positioning at the bottom right
-      const btn = this.add.text(780, 580, 'RESET ROUND', {
-          fontSize: '18px',
-          color: '#ffffff',
-          backgroundColor: '#34495e',
-          padding: { x: 10, y: 5 }
-      })
+    // Positioning at the bottom right
+    const btn = this.add.text(780, 580, 'RESET ROUND', {
+      fontSize: '18px',
+      color: '#ffffff',
+      backgroundColor: '#34495e',
+      padding: { x: 10, y: 5 }
+    })
       .setOrigin(1)
       .setScrollFactor(0)
       .setInteractive({ useHandCursor: true });
 
-      // Hover effects
-      btn.on('pointerover', () => btn.setStyle({ backgroundColor: '#2c3e50' }));
-      btn.on('pointerout', () => btn.setStyle({ backgroundColor: '#34495e' }));
+    // Hover effects
+    btn.on('pointerover', () => btn.setStyle({ backgroundColor: '#2c3e50' }));
+    btn.on('pointerout', () => btn.setStyle({ backgroundColor: '#34495e' }));
 
-      // On Click
-      btn.on('pointerdown', () => {
-          this.socket.emit('requestReset');
-          btn.setStyle({ backgroundColor: '#16a085' }); // Visual click feedback
-      });
+    // On Click
+    btn.on('pointerdown', () => {
+      this.socket.emit('requestReset');
+      btn.setStyle({ backgroundColor: '#16a085' }); // Visual click feedback
+    });
   }
 
   private showBanner(text: string) {
     const banner = this.add.text(400, 100, text, {
-        fontSize: '48px',
-        color: '#ffffff',
-        backgroundColor: '#e74c3c',
-        padding: { x: 20, y: 10 }
+      fontSize: '48px',
+      color: '#ffffff',
+      backgroundColor: '#e74c3c',
+      padding: { x: 20, y: 10 }
     }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
 
     // Fade out and destroy after 2 seconds
     this.tweens.add({
-        targets: banner,
-        alpha: 0,
-        delay: 2000,
-        duration: 500,
-        onComplete: () => banner.destroy()
+      targets: banner,
+      alpha: 0,
+      delay: 2000,
+      duration: 500,
+      onComplete: () => banner.destroy()
     });
-}
+  }
 
-private createMobileControls() {
+  private createMobileControls() {
     const { height } = this.scale;
     const size = 60;
     const padding = 20;
-    
+
     // Position the D-pad in the bottom left
     const centerX = size * 1.5 + padding;
     const centerY = height - (size * 1.5 + padding);
 
     const buttons = [
-        { dir: Direction.UP, x: centerX, y: centerY - size },
-        { dir: Direction.DOWN, x: centerX, y: centerY + size },
-        { dir: Direction.LEFT, x: centerX - size, y: centerY },
-        { dir: Direction.RIGHT, x: centerX + size, y: centerY }
+      { dir: Direction.UP, x: centerX, y: centerY - size },
+      { dir: Direction.DOWN, x: centerX, y: centerY + size },
+      { dir: Direction.LEFT, x: centerX - size, y: centerY },
+      { dir: Direction.RIGHT, x: centerX + size, y: centerY }
     ];
 
     buttons.forEach(btnConfig => {
-        const btn = this.add.rectangle(btnConfig.x, btnConfig.y, size - 5, size - 5, 0xffffff, 0.2)
-            .setInteractive({ useHandCursor: true })
-            .setScrollFactor(0)
-            .setDepth(1000);
+      const btn = this.add.rectangle(btnConfig.x, btnConfig.y, size - 5, size - 5, 0xffffff, 0.2)
+        .setInteractive({ useHandCursor: true })
+        .setScrollFactor(0)
+        .setDepth(1000);
 
-        // Add a small arrow text
-        const arrows: any = { UP: '↑', DOWN: '↓', LEFT: '←', RIGHT: '→' };
-        this.add.text(btnConfig.x, btnConfig.y, arrows[btnConfig.dir], { fontSize: '32px' })
-            .setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+      // Add a small arrow text
+      const arrows: any = { UP: '↑', DOWN: '↓', LEFT: '←', RIGHT: '→' };
+      this.add.text(btnConfig.x, btnConfig.y, arrows[btnConfig.dir], { fontSize: '32px' })
+        .setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-        // Movement Logic
-        btn.on('pointerdown', () => {
-            btn.setFillStyle(0xffffff, 0.5);
-            this.sendMove(btnConfig.dir);
-        });
-        
-        btn.on('pointerup', () => btn.setFillStyle(0xffffff, 0.2));
-        btn.on('pointerout', () => btn.setFillStyle(0xffffff, 0.2));
+      // Movement Logic
+      btn.on('pointerdown', () => {
+        btn.setFillStyle(0xffffff, 0.5);
+        this.sendMove(btnConfig.dir);
+      });
+
+      btn.on('pointerup', () => btn.setFillStyle(0xffffff, 0.2));
+      btn.on('pointerout', () => btn.setFillStyle(0xffffff, 0.2));
     });
-}
+  }
 
   preload() {
     // ... (Your texture generation code is fine, keep it as is)
@@ -117,7 +117,7 @@ private createMobileControls() {
 
   create() {
     // 1. Setup Grid and Map FIRST
-    const mapData = [[1, 1, 1, 1, 1, 1, 1, 1],[1, 0, 0, 0, 0, 0, 0, 1],[1, 0, 1, 1, 0, 1, 0, 1],[1, 0, 0, 0, 0, 1, 0, 1],[1, 1, 1, 1, 1, 1, 1, 1]];
+    const mapData = [[1, 1, 1, 1, 1, 1, 1, 1], [1, 0, 0, 0, 0, 0, 0, 1], [1, 0, 1, 1, 0, 1, 0, 1], [1, 0, 0, 0, 0, 1, 0, 1], [1, 1, 1, 1, 1, 1, 1, 1]];
     const map = this.make.tilemap({ data: mapData, tileWidth: 32, tileHeight: 32 });
     const tileset = map.addTilesetImage('tileTexture', 'tileTexture');
     if (tileset) map.createLayer(0, tileset, 0, 0);
@@ -128,40 +128,53 @@ private createMobileControls() {
     });
 
     this.input.once('pointerdown', () => {
-        // This 'unlocks' the audio for the rest of the session
-        if (this.currentMusic) {
-            this.currentMusic.play().catch(() => {});
-        }
+      // 1. Play current music if it was waiting
+      if (this.currentMusic && this.currentMusic.paused) {
+        this.currentMusic.play().catch(() => { });
+      }
+
+      // 2. Safely resume the Phaser Audio Context
+      const soundManager = this.sound as Phaser.Sound.WebAudioSoundManager;
+      if (soundManager.context && soundManager.context.state === 'suspended') {
+        soundManager.context.resume();
+      }
+    });
+
+    this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
+      const { width, height } = gameSize;
+
+      // Re-center your camera
+      this.cameras.main.centerOn(width, height); // Center on your map (approx 8x32 / 5x32)
     });
 
     this.gridEngine.movementStopped().subscribe(({ charId }) => {
-        // Use 'this.currentChairPos' instead of the undefined 'chairPosition'
-        if (charId === 'player1' && this.currentChairPos.x !== -1) {
-            const pos = this.gridEngine.getPosition('player1');
-            
-            if (pos.x === this.currentChairPos.x && pos.y === this.currentChairPos.y) {
-                this.socket.emit('playerSat', { id: this.socket.id });
-                (this.gridEngine.getSprite('player1') as any).setTint(0xffff00);
-                console.log("I GOT THE CHAIR!");
-                
-                // Optional: Reset chair pos so you can't "sit" on it twice
-                this.currentChairPos = { x: -1, y: -1 };
-            }
+      // Use 'this.currentChairPos' instead of the undefined 'chairPosition'
+      if (charId === 'player1' && this.currentChairPos.x !== -1) {
+        const pos = this.gridEngine.getPosition('player1');
+
+        if (pos.x === this.currentChairPos.x && pos.y === this.currentChairPos.y) {
+          this.socket.emit('playerSat', { id: this.socket.id });
+          (this.gridEngine.getSprite('player1') as any).setTint(0xffff00);
+          console.log("I GOT THE CHAIR!");
+
+          // Optional: Reset chair pos so you can't "sit" on it twice
+          this.currentChairPos = { x: -1, y: -1 };
         }
+      }
     });
 
     // 2. ONLY NOW connect to the socket
     // This ensures all systems are hot before a single byte comes from the network
     this.socket = io(socketUrl, {
-        reconnection: false // Prevent ghost reconnections during dev
+      reconnection: false // Prevent ghost reconnections during dev
     });
 
     this.events.once('create', () => {
-        this.socket = io(socketUrl);
-        this.setupSocketListeners();
-        this.createResetButton();
-        this.createMobileControls();
-        console.log("Scene and Factory are 100% ready. Connecting sockets...");
+      this.socket = io(socketUrl);
+      this.setupSocketListeners();
+      this.createResetButton();
+      this.createMobileControls();
+      console.log("Scene and Factory are 100% ready. Connecting sockets...");
     });
 
     // Manually trigger the event if needed, or just call it after setup
@@ -174,13 +187,13 @@ private createMobileControls() {
     this.socket.off('newPlayer');
 
     this.socket.on('currentPlayers', (players: any) => {
-    Object.values(players).forEach((p: any) => {
+      Object.values(players).forEach((p: any) => {
         // Don't add yourself as a "remote" player!
         if (p.id !== this.socket.id) {
-            this.addRemotePlayer(p);
+          this.addRemotePlayer(p);
         }
+      });
     });
-});
 
     this.socket.on('newPlayer', (data: any) => {
       this.addRemotePlayer(data);
@@ -193,85 +206,85 @@ private createMobileControls() {
     });
 
     this.socket.on('playerDisconnected', (id: string) => {
-          if (this.remotePlayers[id]) {
-            this.gridEngine.removeCharacter(id);
-            this.remotePlayers[id].destroy();
-            delete this.remotePlayers[id];
-          }
-        });
+      if (this.remotePlayers[id]) {
+        this.gridEngine.removeCharacter(id);
+        this.remotePlayers[id].destroy();
+        delete this.remotePlayers[id];
+      }
+    });
 
-        this.socket.on('chairSpawned', (pos: { x: number, y: number }) => {
-          // 1. STOP THE MUSIC IMMEDIATELY
-        if (this.currentMusic) {
-            this.currentMusic.pause();
-            this.currentMusic = null;
-        }
+    this.socket.on('chairSpawned', (pos: { x: number, y: number }) => {
+      // 1. STOP THE MUSIC IMMEDIATELY
+      if (this.currentMusic) {
+        this.currentMusic.pause();
+        this.currentMusic = null;
+      }
 
-        // 2. PLAY THE ALERT SOUND
-        this.sound.play('alert');
+      // 2. PLAY THE ALERT SOUND
+      this.sound.play('alert');
 
-        // 3. SHOW THE BANNER
-        this.showBanner("CHAIR APPEARED! RUN!");
+      // 3. SHOW THE BANNER
+      this.showBanner("CHAIR APPEARED! RUN!");
 
-        // 1. Update the class state so 'movementStopped' can see it
-        this.currentChairPos = pos;
+      // 1. Update the class state so 'movementStopped' can see it
+      this.currentChairPos = pos;
 
-        // 2. Visuals: Remove old chair if it exists
-        if (this.currentChairSprite) this.currentChairSprite.destroy();
+      // 2. Visuals: Remove old chair if it exists
+      if (this.currentChairSprite) this.currentChairSprite.destroy();
 
-        // 3. Create and position the new chair
-        this.currentChairSprite = this.add.sprite(pos.x * 32, pos.y * 32, 'chairTexture').setOrigin(0);
+      // 3. Create and position the new chair
+      this.currentChairSprite = this.add.sprite(pos.x * 32, pos.y * 32, 'chairTexture').setOrigin(0);
 
-        console.log("A chair appeared!");
+      console.log("A chair appeared!");
     });
 
     this.socket.on('chairTaken', (data: { winnerId: string }) => {
-        if (data.winnerId === 'RESET') {
-            this.showBanner("ROUND RESETTING...");
-        } else {
-            const msg = data.winnerId === this.socket.id ? "YOU WON THE CHAIR!" : "TOO SLOW!";
-            console.log(`Round ended! Winner: ${data.winnerId}`);
-            this.showBanner(msg);
-        }
+      if (data.winnerId === 'RESET') {
+        this.showBanner("ROUND RESETTING...");
+      } else {
+        const msg = data.winnerId === this.socket.id ? "YOU WON THE CHAIR!" : "TOO SLOW!";
+        console.log(`Round ended! Winner: ${data.winnerId}`);
+        this.showBanner(msg);
+      }
 
-        // 1. Remove the chair sprite from the screen
-        if (this.currentChairSprite) {
-            this.currentChairSprite.destroy();
-            this.currentChairSprite = null;
-        }
+      // 1. Remove the chair sprite from the screen
+      if (this.currentChairSprite) {
+        this.currentChairSprite.destroy();
+        this.currentChairSprite = null;
+      }
 
-        // 2. Reset the local coordinate check
-        this.currentChairPos = { x: -1, y: -1 };
+      // 2. Reset the local coordinate check
+      this.currentChairPos = { x: -1, y: -1 };
 
-        // 3. Visual feedback: if I didn't win, clear my tint (or vice versa)
-        if (data.winnerId !== this.socket.id) {
-            (this.gridEngine.getSprite('player1') as any).clearTint();
-        }
+      // 3. Visual feedback: if I didn't win, clear my tint (or vice versa)
+      if (data.winnerId !== this.socket.id) {
+        (this.gridEngine.getSprite('player1') as any).clearTint();
+      }
     });
 
     this.socket.on('startMusic', (data: { url: string }) => {
-        if (this.currentMusic) this.currentMusic.pause();
-        this.currentMusic = new Audio(data.url);
-        this.currentMusic.play().catch(() => console.log("Audio play blocked by browser"));
+      if (this.currentMusic) this.currentMusic.pause();
+      this.currentMusic = new Audio(data.url);
+      this.currentMusic.play().catch(() => console.log("Audio play blocked by browser"));
     });
   }
 
   private addRemotePlayer(data: any) {
     // Check if the scene is actually running and NOT shutting down
     if (!this.sys || !this.sys.isActive() || !this.add) {
-        return;
+      return;
     }
 
     if (this.remotePlayers[data.id]) return;
 
     const sprite = this.add.sprite(0, 0, 'remoteTexture').setOrigin(0);
     this.gridEngine.addCharacter({
-        id: data.id,
-        sprite: sprite,
-        startPosition: { x: data.x, y: data.y }
+      id: data.id,
+      sprite: sprite,
+      startPosition: { x: data.x, y: data.y }
     });
     this.remotePlayers[data.id] = sprite;
-    }
+  }
 
   update() {
     // Only process input if the socket is actually connected

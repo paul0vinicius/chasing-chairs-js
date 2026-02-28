@@ -21,13 +21,13 @@ let chairPosition = { x: -1, y: -1 };
 const mapWidth = 8;
 const mapHeight = 5;
 const walls = [
-  {x: 2, y: 2}, {x: 3, y: 2}, {x: 5, y: 2}, {x: 5, y: 3} // Match your MainScene mapData 1s
+  { x: 2, y: 2 }, { x: 3, y: 2 }, { x: 5, y: 2 }, { x: 5, y: 3 } // Match your MainScene mapData 1s
 ];
 
 async function getRandomMusic() {
   const queries = ['brazilian funk'];
   const query = queries[Math.floor(Math.random() * queries.length)];
-  
+
   try {
     const response = await fetch(`https://api.deezer.com/search?q=${query}`);
     const data = await response.json();
@@ -45,34 +45,34 @@ io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
   // 1. Create the new player state
-    players[socket.id] = {
-        id: socket.id,
-        x: 1,
-        y: 1,
-        // Add any other state like 'isSitting' here later
-    };
-  
+  players[socket.id] = {
+    id: socket.id,
+    x: 1,
+    y: 1,
+    // Add any other state like 'isSitting' here later
+  };
+
   // 2. THE KEY STEP: Send the existing player list ONLY to the new player
-    // This gives the joining player "awareness" of who was already there.
-    socket.emit('currentPlayers', players);
+  // This gives the joining player "awareness" of who was already there.
+  socket.emit('currentPlayers', players);
 
-    // 3. Then, tell everyone ELSE that a new player joined
-    socket.broadcast.emit('newPlayer', players[socket.id]);
+  // 3. Then, tell everyone ELSE that a new player joined
+  socket.broadcast.emit('newPlayer', players[socket.id]);
 
-    // Inside your io.on('connection') block
-    socket.on('requestReset', () => {
-        console.log(`Reset requested by ${socket.id}`);
-        
-        // 1. Clear current game state
-        chairActive = false;
-        chairPosition = { x: -1, y: -1 };
-        
-        // 2. Tell everyone to clean up their screens
-        io.emit('chairTaken', { winnerId: 'RESET' }); 
-        
-        // 3. Trigger the music and spawn logic immediately
-        startRound();
-    });
+  // Inside your io.on('connection') block
+  socket.on('requestReset', () => {
+    console.log(`Reset requested by ${socket.id}`);
+
+    // 1. Clear current game state
+    chairActive = false;
+    chairPosition = { x: -1, y: -1 };
+
+    // 2. Tell everyone to clean up their screens
+    io.emit('chairTaken', { winnerId: 'RESET' });
+
+    // 3. Trigger the music and spawn logic immediately
+    startRound();
+  });
 
   // Inside your io.on('connection') block
   socket.on('move', (direction) => {
@@ -94,7 +94,7 @@ io.on('connection', (socket) => {
   socket.on('playerSat', () => {
     if (chairActive) {
       console.log(`Player ${socket.id} won the round!`);
-      
+
       // 1. End current round
       chairActive = false;
       chairPosition = { x: -1, y: -1 };

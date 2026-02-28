@@ -58,7 +58,7 @@ export class MainScene extends Scene {
 }
 
 private createMobileControls() {
-    const { width, height } = this.scale;
+    const { height } = this.scale;
     const size = 60;
     const padding = 20;
     

@@ -10,10 +10,29 @@ export class MainScene extends Scene {
   private remotePlayers: { [key: string]: Phaser.GameObjects.Sprite } = {};
   private currentChairSprite: Phaser.GameObjects.Sprite | null = null;
   private currentChairPos = { x: -1, y: -1 };
+  private currentMusic: HTMLAudioElement | null = null;
 
   constructor() {
     super('MainScene');
   }
+
+  private showBanner(text: string) {
+    const banner = this.add.text(400, 100, text, {
+        fontSize: '48px',
+        color: '#ffffff',
+        backgroundColor: '#e74c3c',
+        padding: { x: 20, y: 10 }
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
+
+    // Fade out and destroy after 2 seconds
+    this.tweens.add({
+        targets: banner,
+        alpha: 0,
+        delay: 2000,
+        duration: 500,
+        onComplete: () => banner.destroy()
+    });
+}
 
   preload() {
     // ... (Your texture generation code is fine, keep it as is)
@@ -31,6 +50,8 @@ export class MainScene extends Scene {
     remoteGraphic.fillStyle(0xff0000, 1);
     remoteGraphic.fillRect(2, 2, 28, 28);
     remoteGraphic.generateTexture('remoteTexture', 32, 32);
+
+    this.load.audio('alert', 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
   }
 
   create() {
@@ -110,6 +131,18 @@ export class MainScene extends Scene {
         });
 
         this.socket.on('chairSpawned', (pos: { x: number, y: number }) => {
+          // 1. STOP THE MUSIC IMMEDIATELY
+        if (this.currentMusic) {
+            this.currentMusic.pause();
+            this.currentMusic = null;
+        }
+
+        // 2. PLAY THE ALERT SOUND
+        this.sound.play('alert');
+
+        // 3. SHOW THE BANNER
+        this.showBanner("CHAIR APPEARED! RUN!");
+        
         // 1. Update the class state so 'movementStopped' can see it
         this.currentChairPos = pos;
 
@@ -125,6 +158,9 @@ export class MainScene extends Scene {
     this.socket.on('chairTaken', (data: { winnerId: string }) => {
         console.log(`Round ended! Winner: ${data.winnerId}`);
 
+        const msg = data.winnerId === this.socket.id ? "YOU WON THE CHAIR!" : "TOO SLOW!";
+        this.showBanner(msg);
+
         // 1. Remove the chair sprite from the screen
         if (this.currentChairSprite) {
             this.currentChairSprite.destroy();
@@ -138,6 +174,12 @@ export class MainScene extends Scene {
         if (data.winnerId !== this.socket.id) {
             (this.gridEngine.getSprite('player1') as any).clearTint();
         }
+    });
+
+    this.socket.on('startMusic', (data: { url: string }) => {
+        if (this.currentMusic) this.currentMusic.pause();
+        this.currentMusic = new Audio(data.url);
+        this.currentMusic.play().catch(e => console.log("Audio play blocked by browser"));
     });
   }
 

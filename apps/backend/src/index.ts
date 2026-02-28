@@ -24,6 +24,23 @@ const walls = [
   {x: 2, y: 2}, {x: 3, y: 2}, {x: 5, y: 2}, {x: 5, y: 3} // Match your MainScene mapData 1s
 ];
 
+async function getRandomMusic() {
+  const queries = ['brazilian funk'];
+  const query = queries[Math.floor(Math.random() * queries.length)];
+  
+  try {
+    const response = await fetch(`https://api.deezer.com/search?q=${query}`);
+    const data = await response.json();
+    const tracks = data.data;
+    // Pick a random track from the first 25 results
+    const randomTrack = tracks[Math.floor(Math.random() * Math.min(tracks.length, 25))];
+    return randomTrack.preview; // This is the 30s MP3 URL
+  } catch (error) {
+    console.error("Music fetch failed:", error);
+    return null;
+  }
+}
+
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
@@ -71,7 +88,7 @@ io.on('connection', (socket) => {
       io.emit('chairTaken', { winnerId: socket.id });
 
       // 3. START THE NEXT ROUND AUTOMATICALLY
-      spawnChair();
+      startRound();
     }
   });
 
@@ -81,11 +98,14 @@ io.on('connection', (socket) => {
   });
 });
 
-function spawnChair() {
+async function startRound() {
   if (chairActive) return; // Prevent multiple chairs spawning at once
 
+  const musicUrl = await getRandomMusic();
+  io.emit('startMusic', { url: musicUrl });
+
   // Random delay between 2 and 5 seconds
-  const delay = Math.floor(Math.random() * 3000) + 2000;
+  const delay = Math.floor(Math.random() * 3000) + 10_000;
 
   setTimeout(() => {
     // 1. Calculate random position (avoiding walls)
@@ -100,13 +120,13 @@ function spawnChair() {
     chairPosition = { x: rx, y: ry };
     chairActive = true;
 
-    // 2. Tell everyone the chair is live
+    // 2. Tell everyone to STOP music and SPAWN chair
     io.emit('chairSpawned', chairPosition);
     console.log(`Chair spawned at ${rx}, ${ry}`);
   }, delay);
 }
 
 // Start the first cycle when the server starts or when someone joins
-spawnChair();
+startRound();
 
 server.listen(3001, () => console.log('TS Backend running on port 3001'));

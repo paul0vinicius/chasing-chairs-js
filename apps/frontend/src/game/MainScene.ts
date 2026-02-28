@@ -65,10 +65,13 @@ export class MainScene extends Scene {
     this.socket.off('newPlayer');
 
     this.socket.on('currentPlayers', (players: any) => {
-      Object.values(players).forEach((p: any) => {
-        if (p.id !== this.socket.id) this.addRemotePlayer(p);
-      });
+    Object.values(players).forEach((p: any) => {
+        // Don't add yourself as a "remote" player!
+        if (p.id !== this.socket.id) {
+            this.addRemotePlayer(p);
+        }
     });
+});
 
     this.socket.on('newPlayer', (data: any) => {
       this.addRemotePlayer(data);

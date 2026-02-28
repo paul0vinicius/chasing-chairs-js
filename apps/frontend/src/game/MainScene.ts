@@ -16,6 +16,29 @@ export class MainScene extends Scene {
     super('MainScene');
   }
 
+  private createResetButton() {
+      // Positioning at the bottom right
+      const btn = this.add.text(780, 580, 'RESET ROUND', {
+          fontSize: '18px',
+          color: '#ffffff',
+          backgroundColor: '#34495e',
+          padding: { x: 10, y: 5 }
+      })
+      .setOrigin(1)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+
+      // Hover effects
+      btn.on('pointerover', () => btn.setStyle({ backgroundColor: '#2c3e50' }));
+      btn.on('pointerout', () => btn.setStyle({ backgroundColor: '#34495e' }));
+
+      // On Click
+      btn.on('pointerdown', () => {
+          this.socket.emit('requestReset');
+          btn.setStyle({ backgroundColor: '#16a085' }); // Visual click feedback
+      });
+  }
+
   private showBanner(text: string) {
     const banner = this.add.text(400, 100, text, {
         fontSize: '48px',
@@ -91,6 +114,7 @@ export class MainScene extends Scene {
     this.events.once('create', () => {
         this.socket = io(socketUrl);
         this.setupSocketListeners();
+        this.createResetButton();
         console.log("Scene and Factory are 100% ready. Connecting sockets...");
     });
 
@@ -156,10 +180,13 @@ export class MainScene extends Scene {
     });
 
     this.socket.on('chairTaken', (data: { winnerId: string }) => {
-        console.log(`Round ended! Winner: ${data.winnerId}`);
-
-        const msg = data.winnerId === this.socket.id ? "YOU WON THE CHAIR!" : "TOO SLOW!";
-        this.showBanner(msg);
+        if (data.winnerId === 'RESET') {
+            this.showBanner("ROUND RESETTING...");
+        } else {
+            const msg = data.winnerId === this.socket.id ? "YOU WON THE CHAIR!" : "TOO SLOW!";
+            console.log(`Round ended! Winner: ${data.winnerId}`);
+            this.showBanner(msg);
+        }
 
         // 1. Remove the chair sprite from the screen
         if (this.currentChairSprite) {

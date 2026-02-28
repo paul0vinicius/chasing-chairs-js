@@ -59,6 +59,21 @@ io.on('connection', (socket) => {
     // 3. Then, tell everyone ELSE that a new player joined
     socket.broadcast.emit('newPlayer', players[socket.id]);
 
+    // Inside your io.on('connection') block
+    socket.on('requestReset', () => {
+        console.log(`Reset requested by ${socket.id}`);
+        
+        // 1. Clear current game state
+        chairActive = false;
+        chairPosition = { x: -1, y: -1 };
+        
+        // 2. Tell everyone to clean up their screens
+        io.emit('chairTaken', { winnerId: 'RESET' }); 
+        
+        // 3. Trigger the music and spawn logic immediately
+        startRound();
+    });
+
   // Inside your io.on('connection') block
   socket.on('move', (direction) => {
     const player = players[socket.id];

@@ -57,6 +57,44 @@ export class MainScene extends Scene {
     });
 }
 
+private createMobileControls() {
+    const { width, height } = this.scale;
+    const size = 60;
+    const padding = 20;
+    
+    // Position the D-pad in the bottom left
+    const centerX = size * 1.5 + padding;
+    const centerY = height - (size * 1.5 + padding);
+
+    const buttons = [
+        { dir: Direction.UP, x: centerX, y: centerY - size },
+        { dir: Direction.DOWN, x: centerX, y: centerY + size },
+        { dir: Direction.LEFT, x: centerX - size, y: centerY },
+        { dir: Direction.RIGHT, x: centerX + size, y: centerY }
+    ];
+
+    buttons.forEach(btnConfig => {
+        const btn = this.add.rectangle(btnConfig.x, btnConfig.y, size - 5, size - 5, 0xffffff, 0.2)
+            .setInteractive({ useHandCursor: true })
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+        // Add a small arrow text
+        const arrows: any = { UP: '↑', DOWN: '↓', LEFT: '←', RIGHT: '→' };
+        this.add.text(btnConfig.x, btnConfig.y, arrows[btnConfig.dir], { fontSize: '32px' })
+            .setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+        // Movement Logic
+        btn.on('pointerdown', () => {
+            btn.setFillStyle(0xffffff, 0.5);
+            this.sendMove(btnConfig.dir);
+        });
+        
+        btn.on('pointerup', () => btn.setFillStyle(0xffffff, 0.2));
+        btn.on('pointerout', () => btn.setFillStyle(0xffffff, 0.2));
+    });
+}
+
   preload() {
     // ... (Your texture generation code is fine, keep it as is)
     const tileGraphic = this.make.graphics({ x: 0, y: 0 });
@@ -89,6 +127,13 @@ export class MainScene extends Scene {
       characters: [{ id: 'player1', sprite: playerSprite, startPosition: { x: 1, y: 1 } }],
     });
 
+    this.input.once('pointerdown', () => {
+        // This 'unlocks' the audio for the rest of the session
+        if (this.currentMusic) {
+            this.currentMusic.play().catch(() => {});
+        }
+    });
+
     this.gridEngine.movementStopped().subscribe(({ charId }) => {
         // Use 'this.currentChairPos' instead of the undefined 'chairPosition'
         if (charId === 'player1' && this.currentChairPos.x !== -1) {
@@ -115,6 +160,7 @@ export class MainScene extends Scene {
         this.socket = io(socketUrl);
         this.setupSocketListeners();
         this.createResetButton();
+        this.createMobileControls();
         console.log("Scene and Factory are 100% ready. Connecting sockets...");
     });
 

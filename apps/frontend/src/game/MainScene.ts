@@ -142,7 +142,7 @@ export class MainScene extends Scene {
 
         // 3. SHOW THE BANNER
         this.showBanner("CHAIR APPEARED! RUN!");
-        
+
         // 1. Update the class state so 'movementStopped' can see it
         this.currentChairPos = pos;
 
@@ -179,7 +179,7 @@ export class MainScene extends Scene {
     this.socket.on('startMusic', (data: { url: string }) => {
         if (this.currentMusic) this.currentMusic.pause();
         this.currentMusic = new Audio(data.url);
-        this.currentMusic.play().catch(e => console.log("Audio play blocked by browser"));
+        this.currentMusic.play().catch(() => console.log("Audio play blocked by browser"));
     });
   }
 

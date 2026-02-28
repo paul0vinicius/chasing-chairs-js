@@ -258,7 +258,7 @@ export class MainScene extends Scene {
       console.log('A chair appeared!')
     })
 
-    this.socket.on('chairTaken', (id) => {
+    this.socket.on('chairTaken', (id: string) => {
       if (id === 'RESET') {
         this.showBanner('ROUND RESETTING...')
       } else {

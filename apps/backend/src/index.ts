@@ -59,6 +59,15 @@ io.on('connection', (socket) => {
   // 3. Then, tell everyone ELSE that a new player joined
   socket.broadcast.emit('newPlayer', players[socket.id]);
 
+  socket.on('joinRoom', () => {
+    // Wait 500ms for the frontend to finish loading the Scene
+    setTimeout(() => {
+      if (!chairActive) {
+        startRound();
+      }
+    }, 500);
+  });
+
   // Inside your io.on('connection') block
   socket.on('requestReset', () => {
     console.log(`Reset requested by ${socket.id}`);
@@ -142,6 +151,6 @@ async function startRound() {
 }
 
 // Start the first cycle when the server starts or when someone joins
-startRound();
+setTimeout(() => startRound(), 5_000);
 
 server.listen(3001, () => console.log('TS Backend running on port 3001'));

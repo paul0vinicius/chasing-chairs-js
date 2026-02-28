@@ -262,11 +262,33 @@ export class MainScene extends Scene {
       }
     });
 
-    this.socket.on('startMusic', (data: { url: string }) => {
-      if (this.currentMusic) this.currentMusic.pause();
-      this.currentMusic = new Audio(data.url);
-      this.currentMusic.play().catch(() => console.log("Audio play blocked by browser"));
-    });
+    // Inside setupSocketListeners
+this.socket.on('startMusic', (data: { url: string }) => {
+    console.log("Music signal received:", data.url);
+    
+    // Use a class-level property
+    if (!this.currentMusic) {
+        this.currentMusic = new Audio();
+    }
+
+    this.currentMusic.src = data.url;
+    this.currentMusic.load(); // Forces the browser to grab the file
+
+    // We use a promise to handle the 'NotAllowedError' gracefully
+    const playPromise = this.currentMusic.play();
+
+    if (playPromise !== undefined) {
+        playPromise.catch(() => {
+            console.log("Autoplay blocked. Waiting for first touch...");
+            // If it fails, we wait for the first tap on the game canvas
+            this.input.once('pointerdown', () => {
+                this.currentMusic?.play();
+            });
+        });
+    }
+});
+
+
   }
 
   private addRemotePlayer(data: any) {

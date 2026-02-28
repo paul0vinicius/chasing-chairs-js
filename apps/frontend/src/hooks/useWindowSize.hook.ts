@@ -9,8 +9,9 @@ function useWindowSize() {
     useEffect(() => {
         const handleResize = () => {
             setSize({
-                width: window.innerWidth,
-                height: window.innerHeight,
+                // Use visualViewport if available, otherwise fallback to innerWidth
+                width: window.visualViewport ? window.visualViewport.width : window.innerWidth,
+                height: window.visualViewport ? window.visualViewport.height : window.innerHeight,
             });
         };
 

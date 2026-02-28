@@ -45,7 +45,20 @@ export const GameComponent = () => {
     }
   }, [width, height]);
 
-  return <div ref={gameContainerRef} id="game-container" />;
+  return (
+    <div
+      ref={gameContainerRef}
+      id="game-container"
+      style={{
+        width: '100vw',
+        height: '100dvh',
+        overflow: 'hidden',
+        position: 'fixed',
+        top: 0,
+        left: 0
+      }}
+    />
+  );
 }
 
 export default GameComponent;

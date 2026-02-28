@@ -22,7 +22,8 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.3.0",
     "prettier": "^3.8.1",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "tsx": "^4.21.0"
   },
   "author": "Paulo Soares",
   "license": "ISC"

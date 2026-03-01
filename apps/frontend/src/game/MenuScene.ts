@@ -98,27 +98,15 @@ export class MenuScene extends Scene {
 
     // --- SOCKET LISTENERS ---
     socket.on('roomCreated', (room) => {
-      console.log(`Room created! Code: ${room.code}`)
       this.mySavedRoomData = room
-      // Show the code to the host so they can share it
-      this.add
-        .text(width / 2, height * 0.85, `Waiting for players...\nCode: ${room.code}`, {
-          fontSize: '24px',
-          color: '#ff0',
-          align: 'center',
-        })
-        .setOrigin(0.5)
+      this.showLobbyUI(room.code)
     })
 
     socket.on('roomJoined', (roomData) => {
-      console.log('Joined room:', roomData)
-      // Clean up socket listeners so they don't fire twice
-      socket.removeAllListeners('roomCreated')
-      socket.removeAllListeners('roomJoined')
-      socket.removeAllListeners('error')
-
-      // Transition to the game scene and pass the room data
-      this.scene.start('MainScene', { room: roomData })
+      // GUEST: Save the data, but DON'T start the scene yet!
+      this.mySavedRoomData = roomData
+      this.showLobbyUI(roomData.code)
+      console.log('Joined lobby, waiting for host or 2nd player...')
     })
 
     socket.on('error', (msg) => {
@@ -126,11 +114,33 @@ export class MenuScene extends Scene {
     })
 
     socket.on('gameStarted', () => {
-      // If the host is still on the MenuScene, push them into the MainScene
-      if (this.scene.isActive('MenuScene')) {
-        // Note: You'll need to store the roomData locally in MenuScene when roomCreated fires
-        this.scene.start('MainScene', { room: this.mySavedRoomData })
+      // BOTH: Once the server says the room is full/ready, everyone enters at once
+      if (this.mySavedRoomData) {
+        this.cleanupAndStart(this.mySavedRoomData)
       }
     })
+  }
+
+  // Helper to hide buttons and show the code
+  private showLobbyUI(code: string) {
+    this.nameInput.setVisible(false)
+    this.codeInput.setVisible(false)
+    // Hide your buttons here too
+
+    this.add
+      .text(400, 300, `LOBBY: ${code}\nWaiting for all players...`, {
+        fontSize: '32px',
+        color: '#fff',
+        align: 'center',
+      })
+      .setOrigin(0.5)
+  }
+
+  private cleanupAndStart(roomData: RoomData) {
+    socket.off('roomCreated')
+    socket.off('roomJoined')
+    socket.off('gameStarted')
+    socket.off('error')
+    this.scene.start('MainScene', { room: roomData })
   }
 }

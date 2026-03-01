@@ -22,7 +22,7 @@ export interface ServerToClientEvents {
   updatedPlayers: (players: Record<string, Player>) => void
   playerMoved: (playerMovedProps: PlayerMovedProps) => void
   playerDisconnected: (id: string) => void
-  gameStarted: () => void
+  gameStarted: (serverPlayers: any) => void
   chairSpawned: (position: Position) => void
   chairTaken: (playerId: string) => void
 

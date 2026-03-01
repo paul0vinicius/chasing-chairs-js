@@ -18,6 +18,8 @@ export class SocketHandler {
     private roomManager: RoomManager
   ) {}
 
+  private roomTimeouts: Map<string, NodeJS.Timeout> = new Map()
+
   handleConnection(socket: Socket<ClientToServerEvents, ServerToClientEvents>) {
     // We store the room code here so we know where the player is if they disconnect
     let currentRoomCode: string | null = null
@@ -34,16 +36,25 @@ export class SocketHandler {
       if (room) {
         currentRoomCode = code
         socket.join(code)
+
+        // 1. Tell the guest they are officially in the lobby
         socket.emit('roomJoined', room)
+
+        // 2. Tell the host someone new arrived
         socket.to(code).emit('playerJoined', room.players[socket.id])
 
-        // If you want the game to start when 2 people join:
+        // 3. If the room is now ready (e.g., 2 players), trigger the synchronized start
         if (Object.keys(room.players).length === 2) {
-          // Add a tiny delay, then start the round for this specific room
+          // Give them 1 second to see the "Lobby" state before jumping in
           setTimeout(() => {
             this.roomManager.setRoomStatus(code, 'playing')
+
+            // Broadcast to EVERYONE in the room
+            this.io.to(code).emit('gameStarted', room.players)
+
+            // Start the actual game logic (music/chairs)
             this.startRound(code)
-          }, 2000)
+          }, 1500)
         }
       } else {
         socket.emit('error', 'Room not found or full')
@@ -62,29 +73,24 @@ export class SocketHandler {
       const room = this.roomManager.getRoom(roomCode)
       if (!room || !room.players[socket.id]) return
 
-      const player = room.players[socket.id]
-      const { position, speed } = player
-
-      if (direction === 'left') position.x -= speed
-      else if (direction === 'right') position.x += speed
-      else if (direction === 'up') position.y -= speed
-      else if (direction === 'down') position.y += speed
-
-      socket.to(roomCode).emit('playerMoved', { id: socket.id, direction })
+      this.io.to(roomCode).emit('playerMoved', { id: socket.id, direction })
     })
 
     socket.on('playerSat', (roomCode) => {
       const room = this.roomManager.getRoom(roomCode)
       if (room && room.chair.isActive) {
-        console.log(`Player ${socket.id} won the round in room ${roomCode}!`)
-
         room.chair.isActive = false
         room.chair.position = { x: -1, y: -1 }
 
-        socket.to(roomCode).emit('chairTaken', socket.id)
+        this.io.to(roomCode).emit('chairTaken', socket.id)
 
-        // Start next round for this specific room
-        this.startRound(roomCode)
+        // Clear any existing timeout for this room before starting a new round
+        if (this.roomTimeouts.has(roomCode)) {
+          clearTimeout(this.roomTimeouts.get(roomCode)!)
+        }
+
+        // Start next round after a 3 second "celebration" delay
+        setTimeout(() => this.startRound(roomCode), 3000)
       }
     })
 
@@ -109,19 +115,24 @@ export class SocketHandler {
 
   private async startRound(roomCode: string) {
     const room = this.roomManager.getRoom(roomCode)
-    if (!room || room.chair.isActive) return
+    if (!room) return
 
-    // Tell everyone to transition from the "Waiting" UI to the active game
-    this.io.to(roomCode).emit('gameStarted')
+    // Reset chair state just to be safe
+    room.chair.isActive = false
+
+    // 1. Tell everyone to start and SEND the current player positions
+    this.io.to(roomCode).emit('gameStarted', room.players)
 
     const musicUrl = await this.getRandomMusic()
-    // Emit ONLY to the room
-    this.io.to(roomCode).emit('musicStarted', { url: musicUrl })
+    if (musicUrl) {
+      this.io.to(roomCode).emit('musicStarted', { url: musicUrl })
+    }
 
-    const delay = Math.floor(Math.random() * 3000) + 10_000
+    const minDelay = 8_000
+    const maxDelay = 20_000
+    const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay
 
-    setTimeout(() => {
-      // Re-fetch the room in case it was deleted during the timeout
+    const timeout = setTimeout(() => {
       const currentRoom = this.roomManager.getRoom(roomCode)
       if (!currentRoom) return
 
@@ -138,12 +149,19 @@ export class SocketHandler {
       currentRoom.chair.isActive = true
 
       this.io.to(roomCode).emit('chairSpawned', currentRoom.chair.position)
-      console.log(`Chair spawned at ${rx}, ${ry} for room ${roomCode}`)
+      this.roomTimeouts.delete(roomCode)
     }, delay)
+
+    this.roomTimeouts.set(roomCode, timeout)
   }
 
   private async getRandomMusic() {
-    const queries = ['brazilian funk']
+    const queries = [
+      'agnes beautiful madness',
+      'marina sena coisas naturais',
+      'anitta funk generation',
+      'slayyyter',
+    ]
     const query = queries[Math.floor(Math.random() * queries.length)]
     try {
       const response = await fetch(`https://api.deezer.com/search?q=${query}`)

@@ -1,9 +1,8 @@
 import { Scene } from 'phaser'
-import { io, Socket } from 'socket.io-client'
+import { Socket } from 'socket.io-client'
 import { GridEngine, Direction } from 'grid-engine'
-import { ServerToClientEvents, ClientToServerEvents, RoomData } from '@chasing-chairs/shared'
-
-const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001'
+import { ClientToServerEvents, RoomData, ServerToClientEvents } from '@chasing-chairs/shared'
+import { socket } from './socket'
 
 export class MainScene extends Scene {
   private gridEngine!: GridEngine
@@ -129,6 +128,15 @@ export class MainScene extends Scene {
     this.load.audio('alert', 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg')
   }
 
+  private joinRoomSafe() {
+    console.log('Joining room with ID:', this.socket.id)
+    this.socket.emit(
+      'joinRoom',
+      this.currentRoom.code,
+      this.currentRoom.players[this.socket.id!]?.name || 'Player'
+    )
+  }
+
   create() {
     const mapData = [
       [1, 1, 1, 1, 1, 1, 1, 1],
@@ -144,26 +152,51 @@ export class MainScene extends Scene {
     const tileset = map.addTilesetImage('tileTexture', 'tileTexture')
     if (tileset) map.createLayer(0, tileset, 0, 0)
 
+    this.socket = socket
+    const myId = this.socket.id!
+
+    const myData = this.currentRoom.players[myId]
+
+    // FALLBACK: If for some reason myId isn't in the object yet, default to 1,1
+    const startPos = myData ? myData.position : { x: 1, y: 1 }
+
     const playerSprite = this.add.sprite(0, 0, 'playerTexture').setOrigin(0)
 
     this.gridEngine.create(map, {
-      characters: [{ id: 'player1', sprite: playerSprite, startPosition: { x: 1, y: 1 } }],
+      characters: [
+        {
+          id: this.socket.id!,
+          sprite: playerSprite,
+          startPosition: startPos,
+        },
+      ],
     })
 
-    // Setup Socket
-    this.socket = io(socketUrl)
+    // Add existing players that were already in the room
+    Object.values(this.currentRoom.players).forEach((player: any) => {
+      if (player.id !== myId) {
+        this.addRemotePlayer(player)
+      }
+    })
+
+    if (this.socket.connected) {
+      this.joinRoomSafe()
+    } else {
+      this.socket.once('connect', () => this.joinRoomSafe())
+    }
+
     this.setupSocketListeners()
     this.createResetButton()
     this.createMobileControls()
 
     this.gridEngine.movementStopped().subscribe(({ charId }) => {
-      if (charId === 'player1' && this.currentChairPos.x !== -1) {
-        const pos = this.gridEngine.getPosition('player1')
+      // Only check if THE LOCAL PLAYER stopped on the chair
+      if (charId === this.socket.id && this.currentChairPos.x !== -1) {
+        const pos = this.gridEngine.getPosition(charId)
 
         if (pos.x === this.currentChairPos.x && pos.y === this.currentChairPos.y) {
-          // OBSERVATION: Sitting now needs to tell the server which room the chair was in!
           this.socket.emit('playerSat', this.currentRoom.code)
-          ;(this.gridEngine.getSprite('player1') as any).setTint(0xffff00)
+          ;(this.gridEngine.getSprite(charId) as any).setTint(0xffff00)
           this.currentChairPos = { x: -1, y: -1 }
         }
       }
@@ -171,15 +204,6 @@ export class MainScene extends Scene {
   }
 
   private setupSocketListeners() {
-    // Tell the server we are ready in this specific room
-    // The server will then send us 'updatedPlayers' for this room only
-    if (this.socket.id)
-      this.socket.emit(
-        'joinRoom',
-        this.currentRoom.code,
-        this.currentRoom.players[this.socket.id]?.name || 'Player'
-      )
-
     this.socket.on('updatedPlayers', (players: any) => {
       Object.values(players).forEach((p: any) => {
         if (p.id !== this.socket.id) {
@@ -193,7 +217,8 @@ export class MainScene extends Scene {
     })
 
     this.socket.on('playerMoved', ({ id, direction }: { id: string; direction: string }) => {
-      if (this.remotePlayers[id]) {
+      // GridEngine can now find EVERYONE (you and remotes) by the same ID
+      if (this.gridEngine.hasCharacter(id)) {
         this.gridEngine.move(id, direction as Direction)
       }
     })
@@ -220,10 +245,12 @@ export class MainScene extends Scene {
     })
 
     this.socket.on('chairTaken', (id: string) => {
+      const myId = this.socket.id!
+
       if (id === 'RESET') {
         this.showBanner('ROUND RESETTING...')
       } else {
-        const msg = id === this.socket.id ? 'YOU WON THE CHAIR!' : 'TOO SLOW!'
+        const msg = id === myId ? 'YOU WON THE CHAIR!' : 'TOO SLOW!'
         this.showBanner(msg)
       }
 
@@ -233,9 +260,15 @@ export class MainScene extends Scene {
       }
       this.currentChairPos = { x: -1, y: -1 }
 
-      if (id !== this.socket.id) {
-        ;(this.gridEngine.getSprite('player1') as any).clearTint()
-      }
+      // Reset my own tint
+      const mySprite = this.gridEngine.getSprite(this.socket.id!) as any
+      if (mySprite) mySprite.clearTint()
+
+      // Reset all remote tints
+      Object.keys(this.remotePlayers).forEach((remoteId) => {
+        const remoteSprite = this.gridEngine.getSprite(remoteId) as any
+        if (remoteSprite) remoteSprite.clearTint()
+      })
     })
 
     this.socket.on('musicStarted', (data: { url: string }) => {
@@ -248,17 +281,35 @@ export class MainScene extends Scene {
         this.input.once('pointerdown', () => this.currentMusic?.play())
       })
     })
+
+    this.socket.on('gameStarted', (serverPlayers: any) => {
+      this.showBanner('MUSIC STARTING...')
+
+      // Iterate through the official positions from the server
+      Object.values(serverPlayers).forEach((p: any) => {
+        if (this.gridEngine.hasCharacter(p.id)) {
+          // Force the character to the server's position immediately
+          // this.gridEngine.setPosition(p.id, p.position)
+        } else if (p.id !== this.socket.id) {
+          // If for some reason we missed a 'playerJoined' event, add them now
+          this.addRemotePlayer(p)
+        }
+      })
+    })
   }
 
   private addRemotePlayer(data: any) {
-    if (!this.sys || !this.sys.isActive() || !this.add || this.remotePlayers[data.id]) return
+    // Guard clause: don't add if scene isn't ready or player already exists
+    if (!this.sys || this.remotePlayers[data.id] || data.id === this.socket.id) return
 
     const sprite = this.add.sprite(0, 0, 'remoteTexture').setOrigin(0)
+
     this.gridEngine.addCharacter({
       id: data.id,
       sprite: sprite,
-      startPosition: { x: data.position.x, y: data.position.y },
+      startPosition: data.position, // Use the position from the server
     })
+
     this.remotePlayers[data.id] = sprite
   }
 
@@ -273,10 +324,11 @@ export class MainScene extends Scene {
   }
 
   private sendMove(direction: Direction) {
-    // FIXED: Changed this.sprite.name to 'player1' to match your create() setup
-    if (this.gridEngine.isMoving('player1')) return
+    const myId = this.socket.id!
 
-    // OBSERVATION: Movement now needs the room code!
+    // Check movement state using your real ID
+    if (this.gridEngine.isMoving(myId)) return
+
     this.socket.emit('playerMoved', this.currentRoom.code, direction)
   }
 }

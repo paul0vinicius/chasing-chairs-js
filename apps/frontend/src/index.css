@@ -4,8 +4,8 @@ body,
 #game-container {
   margin: 0;
   padding: 0;
-  width: 100%;
-  height: 100%;
+  width: 100dvw;
+  height: 100dvh;
   overflow: hidden;
   position: fixed;
   touch-action: none;
@@ -14,7 +14,9 @@ body,
 
 canvas {
   /* Garante que o canvas seja tratado como uma imagem fixa */
-  max-width: 100% !important;
-  max-height: 100% !important;
+  max-width: 100dvw !important;
+  max-height: 100dwh !important;
   image-rendering: pixelated;
+  display: block;
+  touch-action: none;
 }

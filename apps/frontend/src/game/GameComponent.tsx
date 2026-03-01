@@ -13,13 +13,12 @@ export const GameComponent = () => {
       gameInstance.current = new Phaser.Game({
         type: Phaser.AUTO,
         parent: gameContainerRef.current,
-        ...({ resolution: 1 } as any),
         scale: {
-          mode: Phaser.Scale.FIT,
+          mode: Phaser.Scale.RESIZE,
           autoCenter: Phaser.Scale.CENTER_BOTH,
           expandParent: true,
-          width: 390,
-          height: 844,
+          width: '100dvw',
+          height: '100dvh',
         },
         pixelArt: true,
         antialias: false,

@@ -13,9 +13,11 @@ export const GameComponent = () => {
       gameInstance.current = new Phaser.Game({
         type: Phaser.AUTO,
         parent: gameContainerRef.current,
+        ...({ pixelRatio: Math.min(window.devicePixelRatio, 2) } as any),
         scale: {
           mode: Phaser.Scale.RESIZE,
           autoCenter: Phaser.Scale.CENTER_BOTH,
+          expandParent: true,
           width: '100%',
           height: '100%',
         },

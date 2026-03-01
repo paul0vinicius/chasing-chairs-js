@@ -173,6 +173,16 @@ export class MainScene extends Scene {
     // Pivot the container so (0,0) inside it is centered
     this.worldContainer.setX((width - mazeWidth * targetScale) / 2)
 
+    const mapWidth = 8 * 32
+
+    // O container agora começa no centro da tela
+    // Vamos colocar o labirinto um pouco para cima (30% da altura)
+    this.worldContainer = this.add.container(width / 2, height * 0.3)
+
+    // Centraliza o conteúdo dentro do container (offset negativo de metade do mapa)
+    // Isso faz com que o labirinto fique perfeitamente no meio
+    const internalOffsetX = -(mapWidth / 2)
+
     const mapYOffset = 150
 
     // 1. Create a Container to hold the world
@@ -187,9 +197,9 @@ export class MainScene extends Scene {
     const playerSprite = this.add.sprite(0, 0, 'playerTexture').setOrigin(0)
     worldContainer.add(playerSprite) // Add to container so it inherits the +150 offset
 
-    // 3. ADD THE LAYER TO THE CONTAINER
+    // Ao criar a camada e os sprites, use o internalOffsetX
     if (tileset) {
-      const layer = map.createLayer(0, tileset, 0, 0) // Logic 0,0
+      const layer = map.createLayer(0, tileset, internalOffsetX, 0)
       this.worldContainer.add(layer!)
     }
 

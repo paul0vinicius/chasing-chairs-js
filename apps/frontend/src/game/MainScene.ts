@@ -1,7 +1,7 @@
 import { Scene } from 'phaser'
 import { io, Socket } from 'socket.io-client'
 import { GridEngine, Direction } from 'grid-engine'
-import { ServerToClientEvents, ClientToServerEvents } from '@chasing-chairs/shared'
+import { ServerToClientEvents, ClientToServerEvents, RoomData } from '@chasing-chairs/shared'
 
 const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001'
 
@@ -12,13 +12,18 @@ export class MainScene extends Scene {
   private currentChairSprite: Phaser.GameObjects.Sprite | null = null
   private currentChairPos = { x: -1, y: -1 }
   private currentMusic: HTMLAudioElement | null = null
+  private currentRoom!: RoomData
 
   constructor() {
     super('MainScene')
   }
 
+  init(data: { room: RoomData }) {
+    // This catches the room data passed from MenuScene
+    this.currentRoom = data.room
+  }
+
   private createResetButton() {
-    // Positioning at the bottom right
     const btn = this.add
       .text(780, 580, 'RESET ROUND', {
         fontSize: '18px',
@@ -30,14 +35,13 @@ export class MainScene extends Scene {
       .setScrollFactor(0)
       .setInteractive({ useHandCursor: true })
 
-    // Hover effects
     btn.on('pointerover', () => btn.setStyle({ backgroundColor: '#2c3e50' }))
     btn.on('pointerout', () => btn.setStyle({ backgroundColor: '#34495e' }))
 
-    // On Click
     btn.on('pointerdown', () => {
-      this.socket.emit('restartedRound')
-      btn.setStyle({ backgroundColor: '#16a085' }) // Visual click feedback
+      // OBSERVATION: Restart now needs the room code!
+      this.socket.emit('restartRound', this.currentRoom.code)
+      btn.setStyle({ backgroundColor: '#16a085' })
     })
   }
 
@@ -53,7 +57,6 @@ export class MainScene extends Scene {
       .setScrollFactor(0)
       .setDepth(100)
 
-    // Fade out and destroy after 2 seconds
     this.tweens.add({
       targets: banner,
       alpha: 0,
@@ -67,8 +70,6 @@ export class MainScene extends Scene {
     const { height } = this.scale
     const size = 60
     const padding = 20
-
-    // Position the D-pad in the bottom left
     const centerX = size * 1.5 + padding
     const centerY = height - (size * 1.5 + padding)
 
@@ -86,7 +87,6 @@ export class MainScene extends Scene {
         .setScrollFactor(0)
         .setDepth(1000)
 
-      // Add a small arrow text
       const arrows: any = { UP: '↑', DOWN: '↓', LEFT: '←', RIGHT: '→' }
       this.add
         .text(btnConfig.x, btnConfig.y, arrows[btnConfig.dir], { fontSize: '32px' })
@@ -94,7 +94,6 @@ export class MainScene extends Scene {
         .setScrollFactor(0)
         .setDepth(1001)
 
-      // Movement Logic
       btn.on('pointerdown', () => {
         btn.setFillStyle(0xffffff, 0.5)
         this.sendMove(btnConfig.dir)
@@ -106,7 +105,6 @@ export class MainScene extends Scene {
   }
 
   preload() {
-    // ... (Your texture generation code is fine, keep it as is)
     const tileGraphic = this.make.graphics({ x: 0, y: 0 })
     tileGraphic.lineStyle(1, 0xffffff, 0.2)
     tileGraphic.strokeRect(0, 0, 32, 32)
@@ -122,11 +120,16 @@ export class MainScene extends Scene {
     remoteGraphic.fillRect(2, 2, 28, 28)
     remoteGraphic.generateTexture('remoteTexture', 32, 32)
 
+    // Generate a simple chair texture so it doesn't crash
+    const chairGraphic = this.make.graphics({ x: 0, y: 0 })
+    chairGraphic.fillStyle(0xffff00, 1)
+    chairGraphic.fillRect(4, 4, 24, 24)
+    chairGraphic.generateTexture('chairTexture', 32, 32)
+
     this.load.audio('alert', 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg')
   }
 
   create() {
-    // 1. Setup Grid and Map FIRST
     const mapData = [
       [1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
@@ -134,81 +137,51 @@ export class MainScene extends Scene {
       [1, 0, 0, 0, 0, 1, 0, 1],
       [1, 1, 1, 1, 1, 1, 1, 1],
     ]
+
+    console.log(`Game starting in room: ${this.currentRoom.code}`)
+
     const map = this.make.tilemap({ data: mapData, tileWidth: 32, tileHeight: 32 })
     const tileset = map.addTilesetImage('tileTexture', 'tileTexture')
     if (tileset) map.createLayer(0, tileset, 0, 0)
 
     const playerSprite = this.add.sprite(0, 0, 'playerTexture').setOrigin(0)
+
     this.gridEngine.create(map, {
       characters: [{ id: 'player1', sprite: playerSprite, startPosition: { x: 1, y: 1 } }],
     })
 
-    this.input.once('pointerdown', () => {
-      // 1. Play current music if it was waiting
-      if (this.currentMusic && this.currentMusic.paused) {
-        this.currentMusic.play().catch(() => {})
-      }
-
-      // 2. Safely resume the Phaser Audio Context
-      const soundManager = this.sound as Phaser.Sound.WebAudioSoundManager
-      if (soundManager.context && soundManager.context.state === 'suspended') {
-        soundManager.context.resume()
-      }
-    })
-
-    this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
-      const { width, height } = gameSize
-
-      // Re-center your camera
-      this.cameras.main.centerOn(width, height) // Center on your map (approx 8x32 / 5x32)
-    })
+    // Setup Socket
+    this.socket = io(socketUrl)
+    this.setupSocketListeners()
+    this.createResetButton()
+    this.createMobileControls()
 
     this.gridEngine.movementStopped().subscribe(({ charId }) => {
-      // Use 'this.currentChairPos' instead of the undefined 'chairPosition'
       if (charId === 'player1' && this.currentChairPos.x !== -1) {
         const pos = this.gridEngine.getPosition('player1')
 
-        if (
-          this.socket.id &&
-          pos.x === this.currentChairPos.x &&
-          pos.y === this.currentChairPos.y
-        ) {
-          this.socket.emit('playerSat', this.socket.id)
+        if (pos.x === this.currentChairPos.x && pos.y === this.currentChairPos.y) {
+          // OBSERVATION: Sitting now needs to tell the server which room the chair was in!
+          this.socket.emit('playerSat', this.currentRoom.code)
           ;(this.gridEngine.getSprite('player1') as any).setTint(0xffff00)
-          console.log('I GOT THE CHAIR!')
-
-          // Optional: Reset chair pos so you can't "sit" on it twice
           this.currentChairPos = { x: -1, y: -1 }
         }
       }
     })
-
-    // 2. ONLY NOW connect to the socket
-    // This ensures all systems are hot before a single byte comes from the network
-    this.socket = io(socketUrl, {
-      reconnection: false, // Prevent ghost reconnections during dev
-    })
-
-    this.events.once('create', () => {
-      this.socket = io(socketUrl)
-      this.setupSocketListeners()
-      this.createResetButton()
-      this.createMobileControls()
-      console.log('Scene and Factory are 100% ready. Connecting sockets...')
-    })
-
-    // Manually trigger the event if needed, or just call it after setup
-    this.events.emit('create')
   }
 
   private setupSocketListeners() {
-    // CLEANUP: Force remove any old listeners that might be lingering
-    this.socket.off('updatedPlayers')
-    this.socket.off('playerJoined')
+    // Tell the server we are ready in this specific room
+    // The server will then send us 'updatedPlayers' for this room only
+    if (this.socket.id)
+      this.socket.emit(
+        'joinRoom',
+        this.currentRoom.code,
+        this.currentRoom.players[this.socket.id]?.name || 'Player'
+      )
 
     this.socket.on('updatedPlayers', (players: any) => {
       Object.values(players).forEach((p: any) => {
-        // Don't add yourself as a "remote" player!
         if (p.id !== this.socket.id) {
           this.addRemotePlayer(p)
         }
@@ -234,28 +207,16 @@ export class MainScene extends Scene {
     })
 
     this.socket.on('chairSpawned', (pos: { x: number; y: number }) => {
-      // 1. STOP THE MUSIC IMMEDIATELY
       if (this.currentMusic) {
         this.currentMusic.pause()
         this.currentMusic = null
       }
-
-      // 2. PLAY THE ALERT SOUND
       this.sound.play('alert')
-
-      // 3. SHOW THE BANNER
       this.showBanner('CHAIR APPEARED! RUN!')
-
-      // 1. Update the class state so 'movementStopped' can see it
       this.currentChairPos = pos
 
-      // 2. Visuals: Remove old chair if it exists
       if (this.currentChairSprite) this.currentChairSprite.destroy()
-
-      // 3. Create and position the new chair
       this.currentChairSprite = this.add.sprite(pos.x * 32, pos.y * 32, 'chairTexture').setOrigin(0)
-
-      console.log('A chair appeared!')
     })
 
     this.socket.on('chairTaken', (id: string) => {
@@ -263,61 +224,34 @@ export class MainScene extends Scene {
         this.showBanner('ROUND RESETTING...')
       } else {
         const msg = id === this.socket.id ? 'YOU WON THE CHAIR!' : 'TOO SLOW!'
-        console.log(`Round ended! Winner: ${id}`)
         this.showBanner(msg)
       }
 
-      // 1. Remove the chair sprite from the screen
       if (this.currentChairSprite) {
         this.currentChairSprite.destroy()
         this.currentChairSprite = null
       }
-
-      // 2. Reset the local coordinate check
       this.currentChairPos = { x: -1, y: -1 }
 
-      // 3. Visual feedback: if I didn't win, clear my tint (or vice versa)
       if (id !== this.socket.id) {
         ;(this.gridEngine.getSprite('player1') as any).clearTint()
       }
     })
 
-    // Inside setupSocketListeners
     this.socket.on('musicStarted', (data: { url: string }) => {
-      console.log('Music signal received:', data.url)
-
-      // Use a class-level property
       if (!this.currentMusic) {
         this.currentMusic = new Audio()
       }
-
       this.currentMusic.src = data.url
-      this.currentMusic.load() // Forces the browser to grab the file
-
-      // We use a promise to handle the 'NotAllowedError' gracefully
-      const playPromise = this.currentMusic.play()
-
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          console.log('Autoplay blocked. Waiting for first touch...')
-          // If it fails, we wait for the first tap on the game canvas
-          this.input.once('pointerdown', () => {
-            this.currentMusic?.play()
-          })
-        })
-      }
+      this.currentMusic.load()
+      this.currentMusic.play().catch(() => {
+        this.input.once('pointerdown', () => this.currentMusic?.play())
+      })
     })
   }
 
   private addRemotePlayer(data: any) {
-    // Check if the scene is actually running and NOT shutting down
-    if (!this.sys || !this.sys.isActive() || !this.add) {
-      return
-    }
-
-    console.log('DATA!', data)
-
-    if (this.remotePlayers[data.id]) return
+    if (!this.sys || !this.sys.isActive() || !this.add || this.remotePlayers[data.id]) return
 
     const sprite = this.add.sprite(0, 0, 'remoteTexture').setOrigin(0)
     this.gridEngine.addCharacter({
@@ -329,7 +263,6 @@ export class MainScene extends Scene {
   }
 
   update() {
-    // Only process input if the socket is actually connected
     if (!this.socket || !this.socket.connected) return
 
     const cursors = this.input.keyboard!.createCursorKeys()
@@ -340,9 +273,10 @@ export class MainScene extends Scene {
   }
 
   private sendMove(direction: Direction) {
-    if (this.gridEngine && !this.gridEngine.isMoving('player1')) {
-      this.gridEngine.move('player1', direction)
-      this.socket.emit('playerMoved', direction)
-    }
+    // FIXED: Changed this.sprite.name to 'player1' to match your create() setup
+    if (this.gridEngine.isMoving('player1')) return
+
+    // OBSERVATION: Movement now needs the room code!
+    this.socket.emit('playerMoved', this.currentRoom.code, direction)
   }
 }

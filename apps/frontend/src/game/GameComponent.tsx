@@ -3,6 +3,7 @@ import Phaser from 'phaser'
 import { MainScene } from './MainScene'
 import { GridEngine } from 'grid-engine'
 import { useWindowSize } from '../hooks/useWindowSize.hook'
+import { MenuScene } from './MenuScene'
 
 export const GameComponent = () => {
   const { width, height } = useWindowSize()
@@ -19,8 +20,13 @@ export const GameComponent = () => {
           width: width,
           height: height,
         },
+        width: 800,
+        height: 600,
+        dom: {
+          createContainer: true,
+        },
+        scene: [MenuScene, MainScene],
         backgroundColor: '#1a1a1a',
-        scene: [MainScene],
         plugins: {
           scene: [
             {

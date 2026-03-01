@@ -5,6 +5,7 @@ import { RoomData } from './room.types'
 interface PlayerMovedProps {
   id: string
   direction: Direction
+  position: Position
 }
 
 interface MusicStartedProps {

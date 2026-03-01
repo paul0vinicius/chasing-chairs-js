@@ -134,12 +134,14 @@ export class MainScene extends Scene {
   }
 
   private joinRoomSafe() {
-    console.log('Joining room with ID:', this.socket.id)
     this.socket.emit(
       'joinRoom',
       this.currentRoom.code,
       this.currentRoom.players[this.socket.id!]?.name || 'Player'
     )
+
+    // Ask the server for the most up-to-date player list immediately
+    this.socket.emit('requestSync', this.currentRoom.code)
   }
 
   create() {
@@ -206,6 +208,23 @@ export class MainScene extends Scene {
         }
       }
     })
+
+    // NEW: Listen for EVERY tile movement started by the local player
+    this.gridEngine.movementStarted().subscribe(({ charId, direction }) => {
+      if (charId === this.socket.id) {
+        const currentPos = this.gridEngine.getPosition(charId)
+        const nextPos = { ...currentPos }
+
+        // Calculate the target tile based on direction
+        if (direction === Direction.UP) nextPos.y -= 1
+        else if (direction === Direction.DOWN) nextPos.y += 1
+        else if (direction === Direction.LEFT) nextPos.x -= 1
+        else if (direction === Direction.RIGHT) nextPos.x += 1
+
+        // Send the move to the server for EVERY tile transition
+        this.socket.emit('playerMoved', this.currentRoom.code, direction, nextPos)
+      }
+    })
   }
 
   private setupSocketListeners() {
@@ -221,10 +240,23 @@ export class MainScene extends Scene {
       this.addRemotePlayer(data)
     })
 
-    this.socket.on('playerMoved', ({ id, direction }: { id: string; direction: string }) => {
-      // GridEngine can now find EVERYONE (you and remotes) by the same ID
+    this.socket.on('playerMoved', ({ id, direction, position }: any) => {
+      if (id === this.socket.id) return // Prevent local echo
+
       if (this.gridEngine.hasCharacter(id)) {
+        // Force the remote character to move in that direction
         this.gridEngine.move(id, direction as Direction)
+
+        // If the server sent a specific position, verify it when they stop
+        // This acts as a 'correction' if they get out of sync
+        this.gridEngine.movementStopped().subscribe(({ charId }) => {
+          if (charId === id && position) {
+            const currentPos = this.gridEngine.getPosition(id)
+            if (currentPos.x !== position.x || currentPos.y !== position.y) {
+              this.gridEngine.setPosition(id, position)
+            }
+          }
+        })
       }
     })
 
@@ -290,13 +322,11 @@ export class MainScene extends Scene {
     this.socket.on('gameStarted', (serverPlayers: any) => {
       this.showBanner('MUSIC STARTING...')
 
-      // Iterate through the official positions from the server
       Object.values(serverPlayers).forEach((p: any) => {
         if (this.gridEngine.hasCharacter(p.id)) {
-          // Force the character to the server's position immediately
-          // this.gridEngine.setPosition(p.id, p.position)
+          // SNAP everyone to their official server position
+          this.gridEngine.setPosition(p.id, p.position)
         } else if (p.id !== this.socket.id) {
-          // If for some reason we missed a 'playerJoined' event, add them now
           this.addRemotePlayer(p)
         }
       })
@@ -322,18 +352,26 @@ export class MainScene extends Scene {
     if (!this.socket || !this.socket.connected) return
 
     const cursors = this.input.keyboard!.createCursorKeys()
-    if (cursors.left.isDown) this.sendMove(Direction.LEFT)
-    else if (cursors.right.isDown) this.sendMove(Direction.RIGHT)
-    else if (cursors.up.isDown) this.sendMove(Direction.UP)
-    else if (cursors.down.isDown) this.sendMove(Direction.DOWN)
+    if (cursors.left.isDown) this.gridEngine.move(this.socket.id!, Direction.LEFT)
+    else if (cursors.right.isDown) this.gridEngine.move(this.socket.id!, Direction.RIGHT)
+    else if (cursors.up.isDown) this.gridEngine.move(this.socket.id!, Direction.UP)
+    else if (cursors.down.isDown) this.gridEngine.move(this.socket.id!, Direction.DOWN)
   }
 
   private sendMove(direction: Direction) {
     const myId = this.socket.id!
 
-    // Check movement state using your real ID
+    // GridEngine's isMoving check is crucial here
     if (this.gridEngine.isMoving(myId)) return
 
-    this.socket.emit('playerMoved', this.currentRoom.code, direction)
+    const currentPos = this.gridEngine.getPosition(myId)
+    const nextPos = { ...currentPos }
+
+    if (direction === Direction.UP) nextPos.y -= 1
+    else if (direction === Direction.DOWN) nextPos.y += 1
+    else if (direction === Direction.LEFT) nextPos.x -= 1
+    else if (direction === Direction.RIGHT) nextPos.x += 1
+
+    this.gridEngine.move(myId, direction)
   }
 }

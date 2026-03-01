@@ -69,11 +69,20 @@ export class SocketHandler {
       }
     })
 
-    socket.on('playerMoved', (roomCode, direction) => {
+    socket.on('playerMoved', (roomCode, direction, newPos) => {
       const room = this.roomManager.getRoom(roomCode)
       if (!room || !room.players[socket.id]) return
 
-      this.io.to(roomCode).emit('playerMoved', { id: socket.id, direction })
+      // Update the Source of Truth
+      room.players[socket.id].position = newPos
+
+      // Broadcast to everyone ELSE (socket.to) instead of everyone (io.to)
+      // This helps prevent the local player from receiving their own move back
+      socket.to(roomCode).emit('playerMoved', {
+        id: socket.id,
+        direction,
+        position: newPos,
+      })
     })
 
     socket.on('playerSat', (roomCode) => {
@@ -91,6 +100,19 @@ export class SocketHandler {
 
         // Start next round after a 3 second "celebration" delay
         setTimeout(() => this.startRound(roomCode), 3000)
+      }
+    })
+
+    // Inside handleConnection(socket) in SocketHandler.ts
+
+    socket.on('requestSync', (roomCode) => {
+      const room = this.roomManager.getRoom(roomCode)
+
+      if (room) {
+        // We only emit to the specific socket that requested it (socket.emit)
+        // not the whole room (io.to)
+        socket.emit('updatedPlayers', room.players)
+        console.log(`[SYNC] Sent current player states for room ${roomCode} to ${socket.id}`)
       }
     })
 

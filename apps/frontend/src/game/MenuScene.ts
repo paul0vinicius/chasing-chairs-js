@@ -58,7 +58,7 @@ export class MenuScene extends Scene {
     // Lobby Status (The text in your 4th screenshot)
     // We use wordWrap to ensure it doesn't bleed off the edges
     this.lobbyText = this.add
-      .text(centerX, height * 0.85, '', {
+      .text(centerX, height * 0.65, '', {
         fontSize: '22px',
         color: '#ff0',
         align: 'center',

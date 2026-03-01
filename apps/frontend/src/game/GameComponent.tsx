@@ -17,6 +17,7 @@ export const GameComponent = () => {
         parent: gameContainerRef.current,
         scale: {
           mode: Phaser.Scale.RESIZE,
+          autoCenter: Phaser.Scale.CENTER_BOTH,
           width: width,
           height: height,
         },

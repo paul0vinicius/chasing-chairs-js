@@ -5,6 +5,9 @@ import { RoomData } from '@chasing-chairs/shared'
 export class MenuScene extends Scene {
   private nameInput!: Phaser.GameObjects.DOMElement
   private codeInput!: Phaser.GameObjects.DOMElement
+  private lobbyText!: Phaser.GameObjects.Text
+  private createBtn!: Phaser.GameObjects.Text
+  private joinBtn!: Phaser.GameObjects.Text
   private mySavedRoomData!: RoomData
 
   constructor() {
@@ -13,62 +16,57 @@ export class MenuScene extends Scene {
 
   create() {
     const { width, height } = this.scale
+    const centerX = width / 2
 
-    // Title
+    // Title - Positioned at 15% of screen height
     this.add
-      .text(width / 2, height * 0.2, 'CHASING CHAIRS', {
-        fontSize: '48px',
+      .text(centerX, height * 0.15, 'CHASING CHAIRS', {
+        fontSize: `${Math.min(width, height) * 0.08}px`, // Dynamic font size
         color: '#ffffff',
       })
       .setOrigin(0.5)
 
-    // --- INPUT FIELDS ---
-    // Player Name Input
-    this.nameInput = this.add
-      .dom(
-        width / 2,
-        height * 0.4,
-        'input',
-        `
-      width: 200px; 
-      height: 30px; 
-      font-size: 16px; 
-      text-align: center;
-    `
-      )
-      .addListener('focus')
-    // @ts-expect-error - Phaser DOM elements hide some native properties
-    this.nameInput.node.placeholder = 'Enter your Name'
+    // Inputs - Using width percentages and max-widths
+    const inputStyle = `width: ${width * 0.6}px; max-width: 250px; height: 35px; text-align: center;`
 
-    // Room Code Input (for joining)
-    this.codeInput = this.add.dom(
-      width / 2,
-      height * 0.6,
-      'input',
-      `
-      width: 200px; 
-      height: 30px; 
-      font-size: 16px; 
-      text-align: center;
-      text-transform: uppercase;
-    `
-    )
+    this.nameInput = this.add.dom(centerX, height * 0.35, 'input', inputStyle)
+    this.codeInput = this.add.dom(centerX, height * 0.55, 'input', inputStyle)
+
     // @ts-expect-error - Phaser DOM elements hide some native properties
     this.codeInput.node.placeholder = 'Room Code (to join)'
     // @ts-expect-error - Phaser DOM elements hide some native properties
     this.codeInput.node.maxLength = 4
 
     // --- BUTTONS ---
-    // Create Room Button
-    const createBtn = this.add
-      .text(width / 2, height * 0.5, '[ CREATE ROOM ]', {
+    // Buttons - Using percentages to stay clear of inputs
+    this.createBtn = this.add
+      .text(centerX, height * 0.45, '[ CREATE ROOM ]', {
         fontSize: '24px',
         color: '#0f0',
       })
       .setOrigin(0.5)
       .setInteractive()
 
-    createBtn.on('pointerdown', () => {
+    this.joinBtn = this.add
+      .text(centerX, height * 0.65, '[ JOIN ROOM ]', {
+        fontSize: '24px',
+        color: '#0ff',
+      })
+      .setOrigin(0.5)
+      .setInteractive()
+
+    // Lobby Status (The text in your 4th screenshot)
+    // We use wordWrap to ensure it doesn't bleed off the edges
+    this.lobbyText = this.add
+      .text(centerX, height * 0.85, '', {
+        fontSize: '22px',
+        color: '#ff0',
+        align: 'center',
+        wordWrap: { width: width * 0.9 },
+      })
+      .setOrigin(0.5)
+
+    this.createBtn.on('pointerdown', () => {
       const name = (this.nameInput.node as HTMLInputElement).value
       if (name.trim()) {
         socket.emit('createRoom', name)
@@ -77,16 +75,7 @@ export class MenuScene extends Scene {
       }
     })
 
-    // Join Room Button
-    const joinBtn = this.add
-      .text(width / 2, height * 0.7, '[ JOIN ROOM ]', {
-        fontSize: '24px',
-        color: '#0ff',
-      })
-      .setOrigin(0.5)
-      .setInteractive()
-
-    joinBtn.on('pointerdown', () => {
+    this.joinBtn.on('pointerdown', () => {
       const name = (this.nameInput.node as HTMLInputElement).value
       const code = (this.codeInput.node as HTMLInputElement).value.toUpperCase()
       if (name.trim() && code.trim().length === 4) {
@@ -125,15 +114,11 @@ export class MenuScene extends Scene {
   private showLobbyUI(code: string) {
     this.nameInput.setVisible(false)
     this.codeInput.setVisible(false)
-    // Hide your buttons here too
+    this.createBtn.setVisible(false)
+    this.joinBtn.setVisible(false)
 
-    this.add
-      .text(400, 300, `LOBBY: ${code}\nWaiting for all players...`, {
-        fontSize: '32px',
-        color: '#fff',
-        align: 'center',
-      })
-      .setOrigin(0.5)
+    // Update the existing lobbyText instead of creating a new one
+    this.lobbyText.setText(`LOBBY: ${code}\nWaiting for all players...`)
   }
 
   private cleanupAndStart(roomData: RoomData) {

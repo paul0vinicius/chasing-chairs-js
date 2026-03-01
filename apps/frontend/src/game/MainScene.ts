@@ -45,12 +45,15 @@ export class MainScene extends Scene {
   }
 
   private showBanner(text: string) {
+    const { width, height } = this.scale
+
     const banner = this.add
-      .text(400, 100, text, {
-        fontSize: '48px',
+      .text(width / 2, height * 0.2, text, {
+        fontSize: `${Math.min(width, height) * 0.05}px`, // Scale font to screen
         color: '#ffffff',
         backgroundColor: '#e74c3c',
         padding: { x: 20, y: 10 },
+        wordWrap: { width: width * 0.8 }, // Prevent text from going off-screen
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -66,17 +69,19 @@ export class MainScene extends Scene {
   }
 
   private createMobileControls() {
-    const { height } = this.scale
-    const size = 60
+    const { width, height } = this.scale
+    const size = Math.min(width, height) * 0.12 // Dynamic button size
     const padding = 20
-    const centerX = size * 1.5 + padding
-    const centerY = height - (size * 1.5 + padding)
+
+    // Position controls in the bottom right
+    const centerX = width - size * 2 - padding
+    const centerY = height - size * 2 - padding
 
     const buttons = [
-      { dir: Direction.UP, x: centerX, y: centerY - size },
-      { dir: Direction.DOWN, x: centerX, y: centerY + size },
-      { dir: Direction.LEFT, x: centerX - size, y: centerY },
-      { dir: Direction.RIGHT, x: centerX + size, y: centerY },
+      { dir: Direction.UP, x: centerX + size, y: centerY },
+      { dir: Direction.DOWN, x: centerX + size, y: centerY + size * 2 },
+      { dir: Direction.LEFT, x: centerX, y: centerY + size },
+      { dir: Direction.RIGHT, x: centerX + size * 2, y: centerY + size },
     ]
 
     buttons.forEach((btnConfig) => {

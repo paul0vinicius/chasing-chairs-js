@@ -74,7 +74,7 @@ export class MainScene extends Scene {
 
   private createMobileControls() {
     const { width, height } = this.scale
-    const size = Math.min(width, height) * 0.12 // Dynamic button size
+    const size = Math.min(width, height) * 0.08 // Dynamic button size
     const padding = 60
 
     // Position controls in the bottom right
@@ -97,7 +97,7 @@ export class MainScene extends Scene {
 
       const arrows: any = { UP: '↑', DOWN: '↓', LEFT: '←', RIGHT: '→' }
       this.add
-        .text(btnConfig.x, btnConfig.y, arrows[btnConfig.dir], { fontSize: '32px' })
+        .text(btnConfig.x, btnConfig.y, arrows[btnConfig.dir], { fontSize: '24px' })
         .setOrigin(0.5)
         .setScrollFactor(0)
         .setDepth(1001)
@@ -159,6 +159,20 @@ export class MainScene extends Scene {
 
     console.log(`Game starting in room: ${this.currentRoom.code}`)
 
+    const { width, height } = this.scale
+
+    // 1. Calculate how much we need to scale the maze to fit the width
+    // Our maze is 8 tiles wide (8 * 32 = 256px)
+    const mazeWidth = 8 * 32
+    const targetScale = (width * 0.8) / mazeWidth // Occupy 80% of screen width
+
+    // 2. Create the Container and center it
+    this.worldContainer = this.add.container(width / 2, height * 0.3) // Top-centerish
+    this.worldContainer.setScale(targetScale)
+
+    // Pivot the container so (0,0) inside it is centered
+    this.worldContainer.setX((width - mazeWidth * targetScale) / 2)
+
     const mapYOffset = 150
 
     // 1. Create a Container to hold the world
@@ -173,7 +187,11 @@ export class MainScene extends Scene {
     const playerSprite = this.add.sprite(0, 0, 'playerTexture').setOrigin(0)
     worldContainer.add(playerSprite) // Add to container so it inherits the +150 offset
 
-    if (tileset) map.createLayer(0, tileset, 0, mapYOffset)!
+    // 3. ADD THE LAYER TO THE CONTAINER
+    if (tileset) {
+      const layer = map.createLayer(0, tileset, 0, 0) // Logic 0,0
+      this.worldContainer.add(layer!)
+    }
 
     this.socket = socket
     const myId = this.socket.id!
@@ -241,6 +259,17 @@ export class MainScene extends Scene {
         // Send the move to the server for EVERY tile transition
         this.socket.emit('playerMoved', this.currentRoom.code, direction, nextPos)
       }
+    })
+
+    this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
+      const { width, height } = gameSize
+
+      // Recalculate container position
+      const mazeWidth = 8 * 32
+      const targetScale = (width * 0.8) / mazeWidth
+
+      this.worldContainer.setScale(targetScale)
+      this.worldContainer.setPosition((width - mazeWidth * targetScale) / 2, height * 0.2)
     })
   }
 

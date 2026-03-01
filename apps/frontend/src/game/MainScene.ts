@@ -12,6 +12,7 @@ export class MainScene extends Scene {
   private currentChairPos = { x: -1, y: -1 }
   private currentMusic: HTMLAudioElement | null = null
   private currentRoom!: RoomData
+  private worldContainer!: Phaser.GameObjects.Container
 
   constructor() {
     super('MainScene')
@@ -23,8 +24,11 @@ export class MainScene extends Scene {
   }
 
   private createResetButton() {
+    const { width, height } = this.scale
+    const centerX = width / 2
+
     const btn = this.add
-      .text(780, 580, 'RESET ROUND', {
+      .text(centerX, height * 0.5, 'RESET ROUND', {
         fontSize: '18px',
         color: '#ffffff',
         backgroundColor: '#34495e',
@@ -48,7 +52,7 @@ export class MainScene extends Scene {
     const { width, height } = this.scale
 
     const banner = this.add
-      .text(width / 2, height * 0.2, text, {
+      .text(width / 2, height * 0.4, text, {
         fontSize: `${Math.min(width, height) * 0.05}px`, // Scale font to screen
         color: '#ffffff',
         backgroundColor: '#e74c3c',
@@ -71,11 +75,11 @@ export class MainScene extends Scene {
   private createMobileControls() {
     const { width, height } = this.scale
     const size = Math.min(width, height) * 0.12 // Dynamic button size
-    const padding = 20
+    const padding = 60
 
     // Position controls in the bottom right
     const centerX = width - size * 2 - padding
-    const centerY = height - size * 2 - padding
+    const centerY = height - size * 6 - padding
 
     const buttons = [
       { dir: Direction.UP, x: centerX + size, y: centerY },
@@ -155,9 +159,21 @@ export class MainScene extends Scene {
 
     console.log(`Game starting in room: ${this.currentRoom.code}`)
 
+    const mapYOffset = 150
+
+    // 1. Create a Container to hold the world
+    // This will be our new 'zero point' for the maze
+    const worldContainer = this.add.container(0, mapYOffset)
+
+    // 2. Create the Map & Layer
     const map = this.make.tilemap({ data: mapData, tileWidth: 32, tileHeight: 32 })
     const tileset = map.addTilesetImage('tileTexture', 'tileTexture')
-    if (tileset) map.createLayer(0, tileset, 0, 0)
+
+    // 3. Create the Player Sprite
+    const playerSprite = this.add.sprite(0, 0, 'playerTexture').setOrigin(0)
+    worldContainer.add(playerSprite) // Add to container so it inherits the +150 offset
+
+    if (tileset) map.createLayer(0, tileset, 0, mapYOffset)!
 
     this.socket = socket
     const myId = this.socket.id!
@@ -166,8 +182,6 @@ export class MainScene extends Scene {
 
     // FALLBACK: If for some reason myId isn't in the object yet, default to 1,1
     const startPos = myData ? myData.position : { x: 1, y: 1 }
-
-    const playerSprite = this.add.sprite(0, 0, 'playerTexture').setOrigin(0)
 
     this.gridEngine.create(map, {
       characters: [
@@ -178,6 +192,9 @@ export class MainScene extends Scene {
         },
       ],
     })
+
+    // 5. Store the container for later (we'll need it for the chair!)
+    this.worldContainer = worldContainer
 
     // Add existing players that were already in the room
     Object.values(this.currentRoom.players).forEach((player: any) => {
@@ -278,7 +295,9 @@ export class MainScene extends Scene {
       this.currentChairPos = pos
 
       if (this.currentChairSprite) this.currentChairSprite.destroy()
+      // Use 0,0 relative to container (no manual +150 here!)
       this.currentChairSprite = this.add.sprite(pos.x * 32, pos.y * 32, 'chairTexture').setOrigin(0)
+      this.worldContainer.add(this.currentChairSprite) // <--- Add this!
     })
 
     this.socket.on('chairTaken', (id: string) => {
@@ -334,15 +353,15 @@ export class MainScene extends Scene {
   }
 
   private addRemotePlayer(data: any) {
-    // Guard clause: don't add if scene isn't ready or player already exists
-    if (!this.sys || this.remotePlayers[data.id] || data.id === this.socket.id) return
+    if (!this.sys || this.remotePlayers[data.id]) return
 
     const sprite = this.add.sprite(0, 0, 'remoteTexture').setOrigin(0)
+    this.worldContainer.add(sprite) // <--- Add this!
 
     this.gridEngine.addCharacter({
       id: data.id,
       sprite: sprite,
-      startPosition: data.position, // Use the position from the server
+      startPosition: data.position,
     })
 
     this.remotePlayers[data.id] = sprite

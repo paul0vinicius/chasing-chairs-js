@@ -62,7 +62,7 @@ export class MenuScene extends Scene {
         fontSize: '22px',
         color: '#ff0',
         align: 'center',
-        wordWrap: { width: width * 0.9 },
+        wordWrap: { width: width * 0.6 },
       })
       .setOrigin(0.5)
 

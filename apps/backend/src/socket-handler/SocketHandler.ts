@@ -91,7 +91,15 @@ export class SocketHandler {
         room.chair.isActive = false
         room.chair.position = { x: -1, y: -1 }
 
+        const player = room.players[socket.id]
+
+        console.log(`player ${player} sat on the chair`)
+        console.log(`player score: ${player.score}`)
+
         this.io.to(roomCode).emit('chairTaken', socket.id)
+        room.players[socket.id].score += 1
+
+        this.io.to(roomCode).emit('updatedPlayers', room.players)
 
         // Clear any existing timeout for this room before starting a new round
         if (this.roomTimeouts.has(roomCode)) {

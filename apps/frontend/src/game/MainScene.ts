@@ -3,7 +3,7 @@ import { GridEngine, Direction } from 'grid-engine'
 import { RoomData } from '@chasing-chairs/shared'
 import { socket } from './socket'
 import { calculateNextPos } from '../utils/gridUtils'
-import { SocketHandler, UIManager, MazeManager } from './managers'
+import { SocketHandler, UIManager, MazeManager, ScoreboardManager, ScoreData } from './managers'
 import { Player, Chair } from './entitites'
 
 export class MainScene extends Scene {
@@ -11,8 +11,8 @@ export class MainScene extends Scene {
   private socketHandler!: SocketHandler
   private uiManager!: UIManager
   private mazeManager!: MazeManager
+  private scoreboardManager!: ScoreboardManager
 
-  // Entidades Refatoradas
   private players: Map<string, Player> = new Map()
   private chair: Chair | null = null
 
@@ -55,6 +55,7 @@ export class MainScene extends Scene {
     this.socketHandler = new SocketHandler(this, socket)
     this.uiManager = new UIManager(this, this.socketHandler, this.gridEngine)
     this.mazeManager = new MazeManager(this, this.gridEngine)
+    this.scoreboardManager = new ScoreboardManager(this, this.socketHandler.id!)
 
     const myId = this.socketHandler.id!
     const myData = this.currentRoom.players[myId]
@@ -80,6 +81,7 @@ export class MainScene extends Scene {
     })
 
     this.uiManager.createControls()
+    this.refreshScoreboard(this.currentRoom.players)
 
     this.setupNetworkEvents()
     this.setupGameEvents()
@@ -87,11 +89,24 @@ export class MainScene extends Scene {
     this.socketHandler.joinRoom(this.currentRoom.code, 'Player')
   }
 
+  // Cria um helper para formatar os dados e enviar pro Manager
+  private refreshScoreboard(serverPlayers: any) {
+    const scoreData: ScoreData[] = Object.values(serverPlayers).map((p: any) => ({
+      id: p.id,
+      name: p.name || 'Player',
+      score: p.score || 0, // Pega o score do servidor (ou 0 se não tiver ainda)
+    }))
+
+    this.scoreboardManager.updateScoreboard(scoreData)
+  }
+
   private setupNetworkEvents() {
     this.events.on('net:updatedPlayers', (serverPlayers: any) => {
       Object.values(serverPlayers).forEach((p: any) => {
         if (!this.players.has(p.id)) this.addRemotePlayer(p)
       })
+
+      this.refreshScoreboard(serverPlayers)
     })
 
     this.events.on('net:playerMoved', ({ id, direction, position }: any) => {
@@ -123,13 +138,19 @@ export class MainScene extends Scene {
       this.handleChairSpawn(pos)
     )
     this.events.on('net:chairTaken', (id: string) => this.handleChairTaken(id))
-    this.events.on('net:playerJoined', (data: any) => this.addRemotePlayer(data))
+    this.events.on('net:playerJoined', (data: any) => {
+      this.addRemotePlayer(data)
+      this.currentRoom.players[data.id] = data
+      this.refreshScoreboard(this.currentRoom.players)
+    })
 
     this.events.on('net:playerDisconnected', (id: string) => {
       const p = this.players.get(id)
       if (p) {
         p.destroy()
         this.players.delete(id)
+        delete this.currentRoom.players[id] // Remove da sala local
+        this.refreshScoreboard(this.currentRoom.players)
       }
     })
 
@@ -143,10 +164,11 @@ export class MainScene extends Scene {
       if (charId === this.socketHandler.id && this.chair) {
         const pos = this.gridEngine.getPosition(charId)
         if (pos.x === this.chair.position.x && pos.y === this.chair.position.y) {
-          this.socketHandler.sendSat(this.currentRoom.code)
-
           const myPlayer = this.players.get(charId)
-          if (myPlayer) myPlayer.setWinnerTint()
+          if (myPlayer) {
+            myPlayer.setWinnerTint()
+            this.socketHandler.sendSat(this.currentRoom.code)
+          }
 
           // Removemos a referência da cadeira localmente para não enviar 2 vezes
           this.chair.position = { x: -1, y: -1 }

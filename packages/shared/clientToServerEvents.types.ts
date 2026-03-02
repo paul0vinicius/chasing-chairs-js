@@ -7,7 +7,7 @@ export interface ClientToServerEvents {
 
   joinedGame: (name: string) => void
   playerMoved: (roomCode: string, direction: Direction, position: Position) => void
-  playerSat: (id: string) => void
+  playerSat: (roomCode: string) => void
   startGame: (roomCode: string) => void
   requestSync: (roomCode: string) => void
 }

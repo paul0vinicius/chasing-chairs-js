@@ -190,6 +190,9 @@ export class SocketHandler {
       const data = await response.json()
       const tracks = data.data
       const randomTrack = tracks[Math.floor(Math.random() * Math.min(tracks.length, 25))]
+
+      console.log(`Selected music: ${randomTrack.title} - URL: ${randomTrack.link}`)
+
       return randomTrack.preview
     } catch (error) {
       console.error('Music fetch failed:', error)

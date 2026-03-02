@@ -8,4 +8,5 @@ export interface RoomData {
   players: Record<string, Player>
   chair: Chair
   status: RoomStatus
+  mapData: number[][]
 }

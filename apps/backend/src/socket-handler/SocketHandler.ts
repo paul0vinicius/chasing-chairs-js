@@ -2,26 +2,15 @@ import { Server, Socket } from 'socket.io'
 import { ClientToServerEvents, ServerToClientEvents } from '@chasing-chairs/shared'
 import { RoomManager } from '../room/RoomManager'
 
-// Move map constants here
-const mapWidth = 8
-const mapHeight = 5
-const walls = [
-  { x: 2, y: 2 },
-  { x: 3, y: 2 },
-  { x: 5, y: 2 },
-  { x: 5, y: 3 },
-]
-
 export class SocketHandler {
   constructor(
     private io: Server<ClientToServerEvents, ServerToClientEvents>,
     private roomManager: RoomManager
   ) {}
 
-  private roomTimeouts: Map<string, NodeJS.Timeout> = new Map()
+  private static roomTimeouts: Map<string, NodeJS.Timeout> = new Map()
 
   handleConnection(socket: Socket<ClientToServerEvents, ServerToClientEvents>) {
-    // We store the room code here so we know where the player is if they disconnect
     let currentRoomCode: string | null = null
 
     socket.on('createRoom', (playerName) => {
@@ -37,22 +26,13 @@ export class SocketHandler {
         currentRoomCode = code
         socket.join(code)
 
-        // 1. Tell the guest they are officially in the lobby
         socket.emit('roomJoined', room)
-
-        // 2. Tell the host someone new arrived
         socket.to(code).emit('playerJoined', room.players[socket.id])
 
-        // 3. If the room is now ready (e.g., 2 players), trigger the synchronized start
         if (Object.keys(room.players).length === 2) {
-          // Give them 1 second to see the "Lobby" state before jumping in
           setTimeout(() => {
             this.roomManager.setRoomStatus(code, 'playing')
-
-            // Broadcast to EVERYONE in the room
             this.io.to(code).emit('gameStarted', room.players)
-
-            // Start the actual game logic (music/chairs)
             this.startRound(code)
           }, 1500)
         }
@@ -73,11 +53,8 @@ export class SocketHandler {
       const room = this.roomManager.getRoom(roomCode)
       if (!room || !room.players[socket.id]) return
 
-      // Update the Source of Truth
       room.players[socket.id].position = newPos
 
-      // Broadcast to everyone ELSE (socket.to) instead of everyone (io.to)
-      // This helps prevent the local player from receiving their own move back
       socket.to(roomCode).emit('playerMoved', {
         id: socket.id,
         direction,
@@ -87,53 +64,56 @@ export class SocketHandler {
 
     socket.on('playerSat', (roomCode) => {
       const room = this.roomManager.getRoom(roomCode)
+
       if (room && room.chair.isActive) {
+        // 1. Desativa a cadeira IMEDIATAMENTE para evitar que dois sentem ao mesmo tempo
         room.chair.isActive = false
         room.chair.position = { x: -1, y: -1 }
 
+        // 2. Atualiza a pontuação no "Source of Truth"
         const player = room.players[socket.id]
-
-        console.log(`player ${player} sat on the chair`)
-        console.log(`player score: ${player.score}`)
-
-        this.io.to(roomCode).emit('chairTaken', socket.id)
-        room.players[socket.id].score += 1
-
-        this.io.to(roomCode).emit('updatedPlayers', room.players)
-
-        // Clear any existing timeout for this room before starting a new round
-        if (this.roomTimeouts.has(roomCode)) {
-          clearTimeout(this.roomTimeouts.get(roomCode)!)
+        if (player) {
+          player.score += 1
+          console.log(`[Game] ${player.name} pontuou! Novo score: ${player.score}`)
         }
 
-        // Start next round after a 3 second "celebration" delay
-        setTimeout(() => this.startRound(roomCode), 3000)
+        // 3. Avisa a sala quem ganhou a rodada e manda o placar novo
+        this.io.to(roomCode).emit('chairTaken', socket.id)
+        this.io.to(roomCode).emit('updatedPlayers', room.players)
+
+        // 4. LIMPEZA DE TIMERS: Crucial para não encavalar rodadas
+        // Use o 'static' ou a variável fora da classe como discutimos
+        if (SocketHandler.roomTimeouts.has(roomCode)) {
+          clearTimeout(SocketHandler.roomTimeouts.get(roomCode)!)
+          SocketHandler.roomTimeouts.delete(roomCode)
+        }
+
+        // 5. REINÍCIO: Agenda a próxima rodada para daqui a 3 segundos
+        console.log(`[Game] Agendando nova rodada para a sala ${roomCode}...`)
+        setTimeout(() => {
+          this.startRound(roomCode)
+        }, 3000)
       }
     })
 
-    // Inside handleConnection(socket) in SocketHandler.ts
-
     socket.on('requestSync', (roomCode) => {
       const room = this.roomManager.getRoom(roomCode)
-
       if (room) {
-        // We only emit to the specific socket that requested it (socket.emit)
-        // not the whole room (io.to)
         socket.emit('updatedPlayers', room.players)
-        console.log(`[SYNC] Sent current player states for room ${roomCode} to ${socket.id}`)
       }
     })
 
     socket.on('disconnect', () => {
-      // Use the stored room code because the client can't send it when they drop connection
       if (currentRoomCode) {
         const room = this.roomManager.getRoom(currentRoomCode)
         if (room) {
           delete room.players[socket.id]
           socket.to(currentRoomCode).emit('playerDisconnected', socket.id)
 
-          // Optional: If room is empty, delete it entirely to save RAM
           if (Object.keys(room.players).length === 0) {
+            const timeout = SocketHandler.roomTimeouts.get(currentRoomCode)
+            if (timeout) clearTimeout(timeout)
+            SocketHandler.roomTimeouts.delete(currentRoomCode)
             this.roomManager.deleteRoom(currentRoomCode)
           }
         }
@@ -141,16 +121,11 @@ export class SocketHandler {
     })
   }
 
-  // --- PRIVATE GAME LOGIC METHODS --- //
-
   private async startRound(roomCode: string) {
     const room = this.roomManager.getRoom(roomCode)
     if (!room) return
 
-    // Reset chair state just to be safe
     room.chair.isActive = false
-
-    // 1. Tell everyone to start and SEND the current player positions
     this.io.to(roomCode).emit('gameStarted', room.players)
 
     const musicUrl = await this.getRandomMusic()
@@ -162,27 +137,24 @@ export class SocketHandler {
     const maxDelay = 20_000
     const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay
 
+    // No seu Backend: SocketHandler.ts -> dentro de startRound()
+
     const timeout = setTimeout(() => {
       const currentRoom = this.roomManager.getRoom(roomCode)
       if (!currentRoom) return
 
-      let rx = -1,
-        ry = -1
-      let isWall = true
-      while (isWall) {
-        rx = Math.floor(Math.random() * (mapWidth - 2)) + 1
-        ry = Math.floor(Math.random() * (mapHeight - 2)) + 1
-        isWall = walls.some((w) => w.x === rx && w.y === ry)
-      }
-
-      currentRoom.chair.position = { x: rx, y: ry }
+      currentRoom.chair.position = this.roomManager.getRandomSpawnPosition(currentRoom)
       currentRoom.chair.isActive = true
 
+      // 1. DISPARA OS DOIS EVENTOS JUNTOS:
+      // Isso garante que a música pare NO MOMENTO exato em que a cadeira surge.
+      this.io.to(roomCode).emit('musicStopped')
       this.io.to(roomCode).emit('chairSpawned', currentRoom.chair.position)
-      this.roomTimeouts.delete(roomCode)
+
+      SocketHandler.roomTimeouts.delete(roomCode)
     }, delay)
 
-    this.roomTimeouts.set(roomCode, timeout)
+    SocketHandler.roomTimeouts.set(roomCode, timeout)
   }
 
   private async getRandomMusic() {
@@ -193,17 +165,35 @@ export class SocketHandler {
       'slayyyter',
     ]
     const query = queries[Math.floor(Math.random() * queries.length)]
+
     try {
-      const response = await fetch(`https://api.deezer.com/search?q=${query}`)
+      // 1. Cria um "timer de bomba" de 3 segundos para o fetch
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 3000)
+
+      // 2. Passa o signal para o fetch abortar se demorar
+      const response = await fetch(`https://api.deezer.com/search?q=${query}`, {
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId) // Sucesso! Cancela a bomba
+
+      if (!response.ok) return null // Proteção extra contra erro 500 do Deezer
+
       const data = await response.json()
       const tracks = data.data
-      const randomTrack = tracks[Math.floor(Math.random() * Math.min(tracks.length, 25))]
 
-      console.log(`Selected music: ${randomTrack.title} - URL: ${randomTrack.link}`)
+      if (!tracks || tracks.length === 0) return null
+
+      const randomTrack = tracks[Math.floor(Math.random() * Math.min(tracks.length, 25))]
+      console.log(`[Audio] Selected music: ${randomTrack.title}`)
 
       return randomTrack.preview
     } catch (error) {
-      console.error('Music fetch failed:', error)
+      // Se der timeout ou erro, o jogo cai aqui, mas CONTINUA a rodada!
+      console.warn(
+        `[Audio] Music fetch timed out or failed. Continuing round without music. error=${error}`
+      )
       return null
     }
   }

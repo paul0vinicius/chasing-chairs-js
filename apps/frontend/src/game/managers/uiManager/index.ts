@@ -7,6 +7,7 @@ export class UIManager {
   private socketHandler: SocketHandler
   private gridEngine: GridEngine
   private currentMusic: HTMLAudioElement | null = null
+  private musicKey: string | null = null
 
   constructor(scene: Scene, socketHandler: SocketHandler, gridEngine: GridEngine) {
     this.scene = scene
@@ -39,22 +40,22 @@ export class UIManager {
 
   public createControls() {
     const isDesktop = this.scene.sys.game.device.os.desktop
-
-    if (isDesktop) {
-      return
-    }
+    if (isDesktop) return
 
     const { width, height } = this.scene.scale
-    const size = Math.min(width, height) * 0.13
-    const padding = 60
-    const centerX = width - size * 2 - padding
-    const centerY = height - size * 6 - padding
+    const size = Math.min(width, height) * 0.12
+    const padding = 20 // Distância da borda da tela
 
+    // Ponto central exato do D-Pad (ancorado no canto inferior direito)
+    const dpadX = width - size * 1.5 - padding
+    const dpadY = height - size * 1.5 - padding
+
+    // Distribui os botões em formato de Cruz (+)
     const buttons = [
-      { dir: Direction.UP, x: centerX + size, y: centerY },
-      { dir: Direction.DOWN, x: centerX + size, y: centerY + size * 2 },
-      { dir: Direction.LEFT, x: centerX, y: centerY + size },
-      { dir: Direction.RIGHT, x: centerX + size * 2, y: centerY + size },
+      { dir: Direction.UP, x: dpadX, y: dpadY - size },
+      { dir: Direction.DOWN, x: dpadX, y: dpadY + size },
+      { dir: Direction.LEFT, x: dpadX - size, y: dpadY },
+      { dir: Direction.RIGHT, x: dpadX + size, y: dpadY },
     ]
 
     buttons.forEach((btnConfig) => {
@@ -84,20 +85,35 @@ export class UIManager {
     })
   }
 
-  public handleMusic(url: string) {
-    if (!this.currentMusic) this.currentMusic = new Audio()
-    this.currentMusic.src = url
-    this.currentMusic.load()
+  public handleMusic(url: string, roomCode: string) {
+    // 1. Se já houver música tocando, paramos antes de iniciar a nova
+    this.stopMusic()
+
+    // 2. Criamos uma chave única combinando URL, Sala e um Timestamp
+    // Isso força o navegador a tratar como uma nova requisição/instância
+    this.musicKey = `${roomCode}_${url.split('/').pop()}_${Date.now()}`
+
+    this.currentMusic = new Audio(url)
+    this.currentMusic.id = this.musicKey // Atribuímos o ID único ao elemento
+
+    console.log(`[Audio] Iniciando música na sala: ${roomCode}`)
+
     this.currentMusic.play().catch(() => {
+      // Tratamento para políticas de Autoplay do Navegador
       this.showBanner('TAP TO UNMUTE MUSIC')
-      this.scene.input.once('pointerdown', () => this.currentMusic?.play())
+      this.scene.input.once('pointerdown', () => {
+        this.currentMusic?.play()
+      })
     })
   }
 
   public stopMusic() {
     if (this.currentMusic) {
       this.currentMusic.pause()
+      this.currentMusic.currentTime = 0 // Reseta para o início
       this.currentMusic = null
+      this.musicKey = null
+      console.log('[Audio] Música interrompida.')
     }
   }
 }

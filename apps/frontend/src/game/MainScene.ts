@@ -12,6 +12,7 @@ export class MainScene extends Scene {
   private uiManager!: UIManager
   private mazeManager!: MazeManager
   private scoreboardManager!: ScoreboardManager
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
 
   private players: Map<string, Player> = new Map()
   private chair: Chair | null = null
@@ -56,32 +57,33 @@ export class MainScene extends Scene {
     this.uiManager = new UIManager(this, this.socketHandler, this.gridEngine)
     this.mazeManager = new MazeManager(this, this.gridEngine)
     this.scoreboardManager = new ScoreboardManager(this, this.socketHandler.id!)
+    this.cursors = this.input.keyboard!.createCursorKeys()
 
+    // 1. Constrói o labirinto com o mapa gerado pelo servidor!
+    this.mazeManager.buildMaze(this.currentRoom.mapData)
+
+    // 2. O backend já nos deu uma posição válida (myData.position)
     const myId = this.socketHandler.id!
     const myData = this.currentRoom.players[myId]
-    const startPos = myData ? myData.position : { x: 1, y: 1 }
 
-    // 1. Constrói apenas o mapa
-    this.mazeManager.buildMaze()
-
-    // 2. Instancia o Jogador Local
+    // Passamos a posição sorteada pelo servidor para o Player
     const localPlayer = new Player(
       this,
       this.gridEngine,
       myId,
-      startPos,
+      myData.position,
       'playerTexture',
-      this.mazeManager.worldContainer
+      this.mazeManager
     )
     this.players.set(myId, localPlayer)
 
-    // 3. Instancia os Jogadores Remotos já existentes
+    // 3. Adiciona os jogadores remotos (que também já vêm com a posição correta)
     Object.values(this.currentRoom.players).forEach((p: any) => {
       if (p.id !== myId) this.addRemotePlayer(p)
     })
 
-    this.uiManager.createControls()
     this.refreshScoreboard(this.currentRoom.players)
+    this.uiManager.createControls()
 
     this.setupNetworkEvents()
     this.setupGameEvents()
@@ -109,6 +111,26 @@ export class MainScene extends Scene {
       this.refreshScoreboard(serverPlayers)
     })
 
+    // No Frontend: MainScene.ts
+
+    this.events.on('net:gameStarted', () => {
+      console.log('[Game] Nova rodada iniciada!')
+
+      // 1. Limpa a cadeira antiga da tela e da memória
+      if (this.chair) {
+        this.chair.destroy()
+        this.chair = null
+      }
+
+      // 2. Limpa o "brilho" de vencedor de todos os jogadores para a nova rodada
+      this.players.forEach((player) => {
+        player.clearTint()
+      })
+
+      // 3. (Opcional) Mostra um banner de "Música começando..."
+      this.uiManager.showBanner('A MÚSICA VAI COMEÇAR!')
+    })
+
     this.events.on('net:playerMoved', ({ id, direction, position }: any) => {
       if (id === this.socketHandler.id) return // Ignora eco local
 
@@ -134,9 +156,6 @@ export class MainScene extends Scene {
       }
     })
 
-    this.events.on('net:chairSpawned', (pos: { x: number; y: number }) =>
-      this.handleChairSpawn(pos)
-    )
     this.events.on('net:chairTaken', (id: string) => this.handleChairTaken(id))
     this.events.on('net:playerJoined', (data: any) => {
       this.addRemotePlayer(data)
@@ -155,25 +174,32 @@ export class MainScene extends Scene {
     })
 
     this.events.on('net:musicStarted', (data: { url: string }) =>
-      this.uiManager.handleMusic(data.url)
+      this.uiManager.handleMusic(data.url, this.currentRoom.code)
     )
+
+    this.events.on('net:musicStopped', () => {
+      console.log('[Audio] Parando a música porque a cadeira nasceu!')
+      this.uiManager.stopMusic()
+    })
+
+    // IMPORTANTE: Se o jogador sair da sala ou a cena fechar, pare a música!
+    this.events.on('shutdown', () => {
+      this.uiManager.stopMusic()
+    })
   }
 
   private setupGameEvents() {
     this.gridEngine.movementStopped().subscribe(({ charId }) => {
-      if (charId === this.socketHandler.id && this.chair) {
-        const pos = this.gridEngine.getPosition(charId)
-        if (pos.x === this.chair.position.x && pos.y === this.chair.position.y) {
-          const myPlayer = this.players.get(charId)
-          if (myPlayer) {
-            myPlayer.setWinnerTint()
-            this.socketHandler.sendSat(this.currentRoom.code)
-          }
-
-          // Removemos a referência da cadeira localmente para não enviar 2 vezes
-          this.chair.position = { x: -1, y: -1 }
-        }
+      if (charId === this.socketHandler.id) {
+        this.checkChairCollision()
       }
+    })
+
+    // Novo ouvinte: Quando a cadeira nasce
+    this.events.on('net:chairSpawned', (pos: { x: number; y: number }) => {
+      this.handleChairSpawn(pos)
+      // Checa imediatamente se ela nasceu embaixo de mim!
+      this.checkChairCollision()
     })
 
     this.gridEngine.movementStarted().subscribe(({ charId, direction }) => {
@@ -185,13 +211,37 @@ export class MainScene extends Scene {
     })
   }
 
-  private handleChairSpawn(pos: { x: number; y: number }) {
-    this.uiManager.stopMusic()
-    this.sound.play('alert')
-    this.uiManager.showBanner('CHAIR APPEARED! RUN!')
+  private checkChairCollision() {
+    if (!this.chair || !this.socketHandler.id) return
 
-    if (this.chair) this.chair.destroy()
-    this.chair = new Chair(this, pos.x, pos.y, this.mazeManager.worldContainer)
+    const myPos = this.gridEngine.getPosition(this.socketHandler.id)
+    const chairPos = this.chair.position
+
+    const isAtSameX = Math.round(myPos.x) === Math.round(chairPos.x)
+    const isAtSameY = Math.round(myPos.y) === Math.round(chairPos.y)
+
+    if (isAtSameX && isAtSameY) {
+      console.log('SENTOU!')
+
+      this.socketHandler.sendSat(this.currentRoom.code)
+
+      // Feedback visual e desativa a cadeira localmente para evitar spam
+      const myPlayer = this.players.get(this.socketHandler.id)
+      if (myPlayer) myPlayer.setWinnerTint()
+
+      this.chair.destroy()
+      this.chair = null
+    }
+  }
+
+  private handleChairSpawn(pos: { x: number; y: number }) {
+    if (this.chair) {
+      this.chair.destroy()
+    }
+
+    this.chair = new Chair(this, pos.x, pos.y, this.mazeManager)
+
+    console.log(`[Game] Cadeira nasceu em: ${pos.x}, ${pos.y}`)
   }
 
   private handleChairTaken(id: string) {
@@ -218,24 +268,23 @@ export class MainScene extends Scene {
       data.id,
       data.position,
       'remoteTexture',
-      this.mazeManager.worldContainer
+      this.mazeManager
     )
     this.players.set(data.id, remotePlayer)
   }
 
   update() {
     if (!this.socketHandler?.id) return
-    const cursors = this.input.keyboard!.createCursorKeys()
 
     // CORREÇÃO DO BUG: JustDown garante que o evento dispare apenas 1 vez por clique
     // O jogador precisa soltar a tecla e apertar de novo para andar mais um bloco.
-    if (Phaser.Input.Keyboard.JustDown(cursors.left))
+    if (Phaser.Input.Keyboard.JustDown(this.cursors.left))
       this.gridEngine.move(this.socketHandler.id, Direction.LEFT)
-    else if (Phaser.Input.Keyboard.JustDown(cursors.right))
+    else if (Phaser.Input.Keyboard.JustDown(this.cursors.right))
       this.gridEngine.move(this.socketHandler.id, Direction.RIGHT)
-    else if (Phaser.Input.Keyboard.JustDown(cursors.up))
+    else if (Phaser.Input.Keyboard.JustDown(this.cursors.up))
       this.gridEngine.move(this.socketHandler.id, Direction.UP)
-    else if (Phaser.Input.Keyboard.JustDown(cursors.down))
+    else if (Phaser.Input.Keyboard.JustDown(this.cursors.down))
       this.gridEngine.move(this.socketHandler.id, Direction.DOWN)
   }
 }

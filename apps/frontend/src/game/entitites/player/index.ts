@@ -1,5 +1,6 @@
 import { Scene } from 'phaser'
 import { GridEngine } from 'grid-engine'
+import { MazeManager } from 'src/game/managers'
 
 export class Player {
   public id: string
@@ -11,26 +12,31 @@ export class Player {
     gridEngine: GridEngine,
     id: string,
     startPos: { x: number; y: number },
-    texture: string, // 'playerTexture' (verde) ou 'remoteTexture' (vermelho)
-    container: Phaser.GameObjects.Container
+    texture: string,
+    mazeManager: MazeManager
   ) {
     this.id = id
     this.gridEngine = gridEngine
 
-    // Cria o sprite e adiciona ao mundo
+    // Nasce no 0,0 local
     this.sprite = scene.add.sprite(0, 0, texture).setOrigin(0)
-    container.add(this.sprite)
 
-    // Registra o personagem no motor de física
+    // O Container gerencia a posição real e o tamanho na tela
+    mazeManager.worldContainer.add(this.sprite)
+
     this.gridEngine.addCharacter({
       id: this.id,
       sprite: this.sprite,
       startPosition: startPos,
+      speed: 5,
+      collides: {
+        collisionGroups: [this.id],
+      },
     })
   }
 
   public setWinnerTint() {
-    this.sprite.setTint(0xffff00) // Amarelo
+    this.sprite.setTint(0xffff00)
   }
 
   public clearTint() {

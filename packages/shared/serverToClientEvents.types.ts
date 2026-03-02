@@ -29,4 +29,5 @@ export interface ServerToClientEvents {
 
   // Music Events
   musicStarted: (musicStartedProps: MusicStartedProps) => void
+  musicStopped: () => void
 }

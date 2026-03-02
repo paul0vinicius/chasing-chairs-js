@@ -26,6 +26,7 @@ export class SocketHandler {
     this.socket.on('updatedPlayers', (players) =>
       this.scene.events.emit('net:updatedPlayers', players)
     )
+    this.socket.on('musicStopped', () => this.scene.events.emit('net:musicStopped'))
   }
 
   // Métodos de saída (Ações que o jogador toma)

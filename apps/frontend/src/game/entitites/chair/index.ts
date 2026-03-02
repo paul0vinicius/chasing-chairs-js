@@ -1,14 +1,18 @@
 import { Scene } from 'phaser'
+import { MazeManager } from 'src/game/managers'
 
 export class Chair {
   private sprite: Phaser.GameObjects.Sprite
   public position: { x: number; y: number }
 
-  constructor(scene: Scene, x: number, y: number, container: Phaser.GameObjects.Container) {
+  constructor(scene: Scene, x: number, y: number, mazeManager: MazeManager) {
     this.position = { x, y }
-    // Cria o sprite e já adiciona ao container do labirinto
+
+    // Nasce baseada na grade de 32px local
     this.sprite = scene.add.sprite(x * 32, y * 32, 'chairTexture').setOrigin(0)
-    container.add(this.sprite)
+
+    // Entra na caixinha para ser redimensionada e movida junto
+    mazeManager.worldContainer.add(this.sprite)
   }
 
   public destroy() {

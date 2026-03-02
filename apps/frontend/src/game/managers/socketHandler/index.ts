@@ -27,6 +27,10 @@ export class SocketHandler {
       this.scene.events.emit('net:updatedPlayers', players)
     )
     this.socket.on('musicStopped', () => this.scene.events.emit('net:musicStopped'))
+    this.socket.on('gameOver', (players) => this.scene.events.emit('net:gameOver', players))
+    this.socket.on('gameRestarted', (players) =>
+      this.scene.events.emit('net:gameRestarted', players)
+    )
   }
 
   // Métodos de saída (Ações que o jogador toma)
@@ -45,6 +49,18 @@ export class SocketHandler {
 
   sendRestart(roomCode: string) {
     this.socket.emit('restartRound', roomCode)
+  }
+
+  startNewGame(roomCode: string) {
+    this.socket.emit('playAgain', roomCode)
+  }
+
+  connect() {
+    this.socket.connect()
+  }
+
+  disconnect() {
+    this.socket.disconnect()
   }
 
   get id() {

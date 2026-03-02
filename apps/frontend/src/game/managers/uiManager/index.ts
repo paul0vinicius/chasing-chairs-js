@@ -38,6 +38,96 @@ export class UIManager {
     })
   }
 
+  showGameOverScreen(finalPlayers: Record<string, any>, roomCode: string) {
+    // 1. Descobrir quem é o vencedor (ordenando pelo score)
+    const playersList = Object.values(finalPlayers)
+    playersList.sort((a, b) => b.score - a.score)
+    const winner = playersList[0]
+
+    const { width, height } = this.scene.scale
+    const centerX = width / 2
+    const centerY = height / 2
+
+    // 2. Fundo escuro semi-transparente para focar no menu
+    const overlay = this.scene.add.graphics()
+    overlay.fillStyle(0x000000, 0.85)
+    overlay.fillRect(0, 0, width, height)
+    overlay.setDepth(100)
+
+    // 3. Textos do ecrã
+    const title = this.scene.add
+      .text(centerX, centerY - 100, 'FIM DE JOGO!', {
+        fontSize: '48px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+      .setDepth(101)
+
+    const winnerText = this.scene.add
+      .text(centerX, centerY - 40, `VENCEDOR: ${winner.name} (${winner.score} pts)`, {
+        fontSize: '32px',
+        color: '#00ff00',
+      })
+      .setOrigin(0.5)
+      .setDepth(101)
+
+    let timeLeft = 10
+    const countdownText = this.scene.add
+      .text(centerX, centerY + 20, `Voltando ao Lobby em ${timeLeft}...`, {
+        fontSize: '24px',
+        color: '#ffaa00',
+      })
+      .setOrigin(0.5)
+      .setDepth(101)
+
+    // 4. Botões de Acção
+    const stayBtn = this.scene.add
+      .text(centerX - 120, centerY + 100, '[ FICAR NA SALA ]', {
+        fontSize: '24px',
+        color: '#00ffff',
+      })
+      .setOrigin(0.5)
+      .setInteractive()
+      .setDepth(101)
+
+    const leaveBtn = this.scene.add
+      .text(centerX + 120, centerY + 100, '[ SAIR ]', {
+        fontSize: '24px',
+        color: '#ff0000',
+      })
+      .setOrigin(0.5)
+      .setInteractive()
+      .setDepth(101)
+
+    // 5. Lógica da Contagem Decrescente (Timer do Phaser)
+    const timer = this.scene.time.addEvent({
+      delay: 1000,
+      callback: () => {
+        timeLeft--
+        countdownText.setText(`Voltando ao Lobby em ${timeLeft}...`)
+
+        if (timeLeft <= 0) {
+          timer.remove()
+          this.leaveRoom() // Acabou o tempo, expulsa para o menu
+        }
+      },
+      callbackScope: this,
+      loop: true,
+    })
+
+    // 6. Lógica dos Botões
+    stayBtn.on('pointerdown', () => {
+      timer.remove()
+      this.stayInRoom(overlay, [title, winnerText, countdownText, stayBtn, leaveBtn], roomCode)
+    })
+
+    leaveBtn.on('pointerdown', () => {
+      timer.remove()
+      this.leaveRoom()
+    })
+  }
+
   public createControls() {
     const isDesktop = this.scene.sys.game.device.os.desktop
     if (isDesktop) return
@@ -115,5 +205,25 @@ export class UIManager {
       this.musicKey = null
       console.log('[Audio] Música interrompida.')
     }
+  }
+
+  private leaveRoom() {
+    this.stopMusic()
+    this.socketHandler.disconnect()
+    this.socketHandler.connect()
+    this.scene.scene.start('MenuScene')
+  }
+
+  private stayInRoom(
+    overlay: Phaser.GameObjects.Graphics,
+    uiElements: Phaser.GameObjects.GameObject[],
+    roomCode: string
+  ) {
+    overlay.destroy()
+    uiElements.forEach((el) => el.destroy())
+
+    this.showBanner('ESPERANDO OS OUTROS JOGADORES...')
+
+    this.socketHandler.startNewGame(roomCode)
   }
 }

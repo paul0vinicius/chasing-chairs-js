@@ -13,8 +13,8 @@ export class SocketHandler {
   handleConnection(socket: Socket<ClientToServerEvents, ServerToClientEvents>) {
     let currentRoomCode: string | null = null
 
-    socket.on('createRoom', (playerName, roomSize) => {
-      const room = this.roomManager.createRoom(socket.id, playerName, roomSize)
+    socket.on('createRoom', (playerName, roomSize, rounds) => {
+      const room = this.roomManager.createRoom(socket.id, playerName, roomSize, rounds)
       currentRoomCode = room.code
       socket.join(room.code)
       socket.emit('roomCreated', room)
@@ -62,33 +62,80 @@ export class SocketHandler {
       const room = this.roomManager.getRoom(roomCode)
 
       if (room && room.chair.isActive) {
-        // 1. Desativa a cadeira IMEDIATAMENTE para evitar que dois sentem ao mesmo tempo
         room.chair.isActive = false
         room.chair.position = { x: -1, y: -1 }
 
-        // 2. Atualiza a pontuação no "Source of Truth"
         const player = room.players[socket.id]
-        if (player) {
-          player.score += 1
-          console.log(`[Game] ${player.name} pontuou! Novo score: ${player.score}`)
-        }
+        if (!player) return
 
-        // 3. Avisa a sala quem ganhou a rodada e manda o placar novo
+        player.score += 1
+        console.log(`[Game] ${player.name} pontuou! Score: ${player.score}`)
+
+        // 1. INCREMENTA A RODADA
+        room.currentRound = (room.currentRound || 0) + 1
+
         this.io.to(roomCode).emit('chairTaken', socket.id)
         this.io.to(roomCode).emit('updatedPlayers', room.players)
 
-        // 4. LIMPEZA DE TIMERS: Crucial para não encavalar rodadas
-        // Use o 'static' ou a variável fora da classe como discutimos
         if (SocketHandler.roomTimeouts.has(roomCode)) {
           clearTimeout(SocketHandler.roomTimeouts.get(roomCode)!)
           SocketHandler.roomTimeouts.delete(roomCode)
         }
 
-        // 5. REINÍCIO: Agenda a próxima rodada para daqui a 3 segundos
-        console.log(`[Game] Agendando nova rodada para a sala ${roomCode}...`)
-        setTimeout(() => {
-          this.startRound(roomCode)
-        }, 3000)
+        // 2. VERIFICA SE O JOGO ACABOU
+        if (room.currentRound >= room.rounds) {
+          console.log(`[Game] Sala ${roomCode} terminou! Max Rounds atingido.`)
+          this.roomManager.setRoomStatus(roomCode, 'finished')
+
+          // Dá um pequeno atraso (2 segundos) para as pessoas verem quem sentou por último
+          setTimeout(() => {
+            this.io.to(roomCode).emit('gameOver', room.players)
+          }, 2000)
+        } else {
+          // 3. SE NÃO ACABOU, CONTINUA PARA A PRÓXIMA RODADA
+          console.log(`[Game] Agendando rodada ${room.currentRound + 1} para a sala ${roomCode}...`)
+          setTimeout(() => {
+            this.startRound(roomCode)
+          }, 3000)
+        }
+      }
+    })
+
+    socket.on('playAgain', (roomCode) => {
+      const room = this.roomManager.getRoom(roomCode)
+
+      if (room && room.status === 'finished') {
+        const player = room.players[socket.id]
+        if (!player) return
+
+        // 1. Marca este jogador como pronto para a próxima partida
+        player.isReadyToPlayAgain = true
+        console.log(`[Game] ${player.name} quer jogar novamente na sala ${roomCode}`)
+
+        // 2. Verifica se TODOS os jogadores atualmente na sala estão prontos
+        const playersList = Object.values(room.players)
+        const allReady = playersList.every((p) => p.isReadyToPlayAgain)
+
+        if (allReady) {
+          console.log(`[Game] Todos prontos! Reiniciando sala ${roomCode}...`)
+
+          // 3. Zera os dados da sala e dos jogadores
+          room.currentRound = 0
+          playersList.forEach((p) => {
+            p.score = 0
+            p.isReadyToPlayAgain = false // Reseta a flag para o fim da próxima partida
+          })
+
+          this.roomManager.setRoomStatus(roomCode, 'playing')
+
+          // 4. Avisa o frontend para limpar a tela e o placar
+          this.io.to(roomCode).emit('gameRestarted', room.players)
+
+          // 5. Dá a largada na nova partida!
+          setTimeout(() => {
+            this.startRound(roomCode)
+          }, 2000)
+        }
       }
     })
 

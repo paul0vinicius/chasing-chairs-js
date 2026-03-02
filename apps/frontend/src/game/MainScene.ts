@@ -111,8 +111,6 @@ export class MainScene extends Scene {
       this.refreshScoreboard(serverPlayers)
     })
 
-    // No Frontend: MainScene.ts
-
     this.events.on('net:gameStarted', () => {
       console.log('[Game] Nova rodada iniciada!')
 
@@ -182,9 +180,19 @@ export class MainScene extends Scene {
       this.uiManager.stopMusic()
     })
 
-    // IMPORTANTE: Se o jogador sair da sala ou a cena fechar, pare a música!
     this.events.on('shutdown', () => {
       this.uiManager.stopMusic()
+    })
+
+    this.events.on('net:gameOver', (finalPlayers: any) => {
+      this.uiManager.showGameOverScreen(finalPlayers, this.currentRoom.code)
+    })
+
+    this.events.on('net:gameRestarted', (players: any) => {
+      console.log('[Game] A partida foi reiniciada do zero!')
+
+      this.refreshScoreboard(players)
+      this.players.forEach((player) => player.clearTint())
     })
   }
 

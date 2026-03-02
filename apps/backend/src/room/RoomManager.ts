@@ -55,7 +55,7 @@ export class RoomManager {
     return availableSpawns[randomIndex]
   }
 
-  createRoom(hostId: string, hostName: string, size: number): RoomData {
+  createRoom(hostId: string, hostName: string, size: number, rounds: number): RoomData {
     const code = Math.random().toString(36).substring(2, 6).toUpperCase()
 
     const randomMapIndex = Math.floor(Math.random() * AVAILABLE_MAPS.length)
@@ -70,6 +70,8 @@ export class RoomManager {
       status: 'waiting',
       mapData: selectedMap,
       size,
+      rounds,
+      currentRound: 0,
     }
 
     const hostSpawn = this.getRandomSpawnPosition(newRoom)

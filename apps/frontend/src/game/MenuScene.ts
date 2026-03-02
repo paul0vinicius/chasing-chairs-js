@@ -5,6 +5,8 @@ import { RoomData } from '@chasing-chairs/shared'
 const MAX_ROOM_SIZE = 4
 const MIN_ROOM_SIZE = 1
 
+const ROUNDS_OPTIONS = [1, 5, 10]
+
 export class MenuScene extends Scene {
   private nameInput!: Phaser.GameObjects.DOMElement
   private codeInput!: Phaser.GameObjects.DOMElement
@@ -12,8 +14,11 @@ export class MenuScene extends Scene {
   private createBtn!: Phaser.GameObjects.Text
   private joinBtn!: Phaser.GameObjects.Text
   private playersToggleBtn!: Phaser.GameObjects.Text
-
+  private roundsToggleBtn!: Phaser.GameObjects.Text
   private mySavedRoomData!: RoomData
+
+  private roundsPointer: number = 0
+  private rounds: number = ROUNDS_OPTIONS[this.roundsPointer]
   private roomSize: number = 1
 
   constructor() {
@@ -42,6 +47,14 @@ export class MenuScene extends Scene {
     // NOVO: Botão de Seleção de Jogadores
     this.playersToggleBtn = this.add
       .text(centerX, height * 0.38, `< PLAYERS: ${this.roomSize} >`, {
+        fontSize: '22px',
+        color: '#ffaa00',
+      })
+      .setOrigin(0.5)
+      .setInteractive()
+
+    this.roundsToggleBtn = this.add
+      .text(centerX, height * 0.43, `< ROUNDS: ${this.rounds} >`, {
         fontSize: '22px',
         color: '#ffaa00',
       })
@@ -88,10 +101,18 @@ export class MenuScene extends Scene {
       this.playersToggleBtn.setText(`< PLAYERS: ${this.roomSize} >`)
     })
 
+    // Lógica de clique para alternar as rodadas (ex: 3 -> 5 -> 10 -> 3)
+    this.roundsToggleBtn.on('pointerdown', () => {
+      this.roundsPointer =
+        this.roundsPointer >= ROUNDS_OPTIONS.length - 1 ? 0 : this.roundsPointer + 1
+      this.rounds = ROUNDS_OPTIONS[this.roundsPointer]
+      this.roundsToggleBtn.setText(`< ROUNDS: ${this.rounds} >`)
+    })
+
     this.createBtn.on('pointerdown', () => {
       const name = (this.nameInput.node as HTMLInputElement).value
       if (name.trim()) {
-        socket.emit('createRoom', name, this.roomSize)
+        socket.emit('createRoom', name, this.roomSize, this.rounds)
       } else {
         alert('Please enter a name first!')
       }
@@ -134,7 +155,8 @@ export class MenuScene extends Scene {
     this.codeInput.setVisible(false)
     this.createBtn.setVisible(false)
     this.joinBtn.setVisible(false)
-    this.playersToggleBtn.setVisible(false) // Esconde o seletor também
+    this.playersToggleBtn.setVisible(false)
+    this.roundsToggleBtn.setVisible(false)
 
     // Como o maxPlayers agora vem do servidor, podemos mostrar no lobby!
     const currentPlayers = Object.keys(this.mySavedRoomData.players).length

@@ -26,6 +26,8 @@ export interface ServerToClientEvents {
   gameStarted: (serverPlayers: any) => void
   chairSpawned: (position: Position) => void
   chairTaken: (playerId: string) => void
+  gameOver: (finalPlayers: Record<string, any>) => void
+  gameRestarted: (players: Record<string, any>) => void
 
   // Music Events
   musicStarted: (musicStartedProps: MusicStartedProps) => void

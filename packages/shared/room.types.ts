@@ -10,4 +10,6 @@ export interface RoomData {
   status: RoomStatus
   mapData: number[][]
   size: number
+  rounds: number
+  currentRound: number
 }

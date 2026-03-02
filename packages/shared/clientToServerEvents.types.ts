@@ -1,7 +1,7 @@
 import { Direction, Position } from './position.types'
 
 export interface ClientToServerEvents {
-  createRoom: (playerName: string, roomSize: number) => void
+  createRoom: (playerName: string, roomSize: number, rounds: number) => void
   joinRoom: (roomCode: string, playerName: string) => void
   restartRound: (roomCode: string) => void
 
@@ -9,5 +9,6 @@ export interface ClientToServerEvents {
   playerMoved: (roomCode: string, direction: Direction, position: Position) => void
   playerSat: (roomCode: string) => void
   startGame: (roomCode: string) => void
+  playAgain: (roomCode: string) => void
   requestSync: (roomCode: string) => void
 }

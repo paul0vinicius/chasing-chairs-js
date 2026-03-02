@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io'
-import { ClientToServerEvents, ServerToClientEvents } from '@chasing-chairs/shared'
+import { ClientToServerEvents, RoomData, ServerToClientEvents } from '@chasing-chairs/shared'
 import { RoomManager } from '../room/RoomManager'
 
 export class SocketHandler {
@@ -13,11 +13,13 @@ export class SocketHandler {
   handleConnection(socket: Socket<ClientToServerEvents, ServerToClientEvents>) {
     let currentRoomCode: string | null = null
 
-    socket.on('createRoom', (playerName) => {
-      const room = this.roomManager.createRoom(socket.id, playerName)
+    socket.on('createRoom', (playerName, roomSize) => {
+      const room = this.roomManager.createRoom(socket.id, playerName, roomSize)
       currentRoomCode = room.code
       socket.join(room.code)
       socket.emit('roomCreated', room)
+
+      this.verifyIfRoomIsReady(room, room.code)
     })
 
     socket.on('joinRoom', (code, playerName) => {
@@ -29,13 +31,7 @@ export class SocketHandler {
         socket.emit('roomJoined', room)
         socket.to(code).emit('playerJoined', room.players[socket.id])
 
-        if (Object.keys(room.players).length === 2) {
-          setTimeout(() => {
-            this.roomManager.setRoomStatus(code, 'playing')
-            this.io.to(code).emit('gameStarted', room.players)
-            this.startRound(code)
-          }, 1500)
-        }
+        this.verifyIfRoomIsReady(room, code)
       } else {
         socket.emit('error', 'Room not found or full')
       }
@@ -119,6 +115,16 @@ export class SocketHandler {
         }
       }
     })
+  }
+
+  private verifyIfRoomIsReady(room: RoomData, roomCode: string) {
+    if (Object.keys(room.players).length === room.size) {
+      setTimeout(() => {
+        this.roomManager.setRoomStatus(roomCode, 'playing')
+        this.io.to(roomCode).emit('gameStarted', room.players)
+        this.startRound(roomCode)
+      }, 1500)
+    }
   }
 
   private async startRound(roomCode: string) {

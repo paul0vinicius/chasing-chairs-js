@@ -55,7 +55,7 @@ export class RoomManager {
     return availableSpawns[randomIndex]
   }
 
-  createRoom(hostId: string, hostName: string): RoomData {
+  createRoom(hostId: string, hostName: string, size: number): RoomData {
     const code = Math.random().toString(36).substring(2, 6).toUpperCase()
 
     const randomMapIndex = Math.floor(Math.random() * AVAILABLE_MAPS.length)
@@ -69,6 +69,7 @@ export class RoomManager {
       chair: JSON.parse(JSON.stringify(INITIAL_STATE_CHAIR)),
       status: 'waiting',
       mapData: selectedMap,
+      size,
     }
 
     const hostSpawn = this.getRandomSpawnPosition(newRoom)
@@ -86,8 +87,7 @@ export class RoomManager {
   joinRoom(code: string, playerId: string, playerName: string): RoomData | null {
     const room = this.rooms.get(code)
 
-    // O limite de jogadores (MAX_ROOM_SIZE) geralmente é 4, ajuste se o seu for diferente
-    if (room && room.status === 'waiting' && Object.keys(room.players).length < 4) {
+    if (room && room.status === 'waiting' && Object.keys(room.players).length < room.size) {
       // Sorteia a posição para o novo jogador baseada no mapa ÚNICO desta sala
       const spawnPos = this.getRandomSpawnPosition(room)
 
@@ -98,7 +98,7 @@ export class RoomManager {
         ...cleanPlayerState,
         id: playerId,
         name: playerName,
-        position: spawnPos, // Já entra no lugar certo
+        position: spawnPos,
       }
 
       return room

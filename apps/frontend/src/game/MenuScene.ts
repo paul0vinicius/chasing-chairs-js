@@ -2,13 +2,19 @@ import { Scene } from 'phaser'
 import { socket } from './socket'
 import { RoomData } from '@chasing-chairs/shared'
 
+const MAX_ROOM_SIZE = 4
+const MIN_ROOM_SIZE = 1
+
 export class MenuScene extends Scene {
   private nameInput!: Phaser.GameObjects.DOMElement
   private codeInput!: Phaser.GameObjects.DOMElement
   private lobbyText!: Phaser.GameObjects.Text
   private createBtn!: Phaser.GameObjects.Text
   private joinBtn!: Phaser.GameObjects.Text
+  private playersToggleBtn!: Phaser.GameObjects.Text
+
   private mySavedRoomData!: RoomData
+  private roomSize: number = 1
 
   constructor() {
     super('MenuScene')
@@ -18,47 +24,55 @@ export class MenuScene extends Scene {
     const { width, height } = this.scale
     const centerX = width / 2
 
-    // Title - Positioned at 15% of screen height
+    // Title
     this.add
       .text(centerX, height * 0.15, 'CHASING CHAIRS', {
-        fontSize: `${Math.min(width, height) * 0.08}px`, // Dynamic font size
+        fontSize: `${Math.min(width, height) * 0.08}px`,
         color: '#ffffff',
       })
       .setOrigin(0.5)
 
-    // Inputs - Using width percentages and max-widths
     const inputStyle = `width: ${width * 0.6}px; max-width: 250px; height: 35px; text-align: center;`
 
-    this.nameInput = this.add.dom(centerX, height * 0.35, 'input', inputStyle)
-    this.codeInput = this.add.dom(centerX, height * 0.55, 'input', inputStyle)
+    // --- SESSÃO DE CRIAÇÃO (Subiu um pouco para dar espaço) ---
+    this.nameInput = this.add.dom(centerX, height * 0.28, 'input', inputStyle)
+    // @ts-expect-error - Direct DOM modification - It will be changed later
+    this.nameInput.node.placeholder = 'Your Name'
 
-    // @ts-expect-error - Phaser DOM elements hide some native properties
-    this.codeInput.node.placeholder = 'Room Code (to join)'
-    // @ts-expect-error - Phaser DOM elements hide some native properties
-    this.codeInput.node.maxLength = 4
+    // NOVO: Botão de Seleção de Jogadores
+    this.playersToggleBtn = this.add
+      .text(centerX, height * 0.38, `< PLAYERS: ${this.roomSize} >`, {
+        fontSize: '22px',
+        color: '#ffaa00',
+      })
+      .setOrigin(0.5)
+      .setInteractive()
 
-    // --- BUTTONS ---
-    // Buttons - Using percentages to stay clear of inputs
     this.createBtn = this.add
-      .text(centerX, height * 0.45, '[ CREATE ROOM ]', {
+      .text(centerX, height * 0.48, '[ CREATE ROOM ]', {
         fontSize: '24px',
         color: '#0f0',
       })
       .setOrigin(0.5)
       .setInteractive()
 
+    // --- SESSÃO DE ENTRADA (Desceu um pouco) ---
+    this.codeInput = this.add.dom(centerX, height * 0.62, 'input', inputStyle)
+    // @ts-expect-error - Direct DOM modification - It will be changed later
+    this.codeInput.node.placeholder = 'Room Code (to join)'
+    // @ts-expect-error - Direct DOM modification - It will be changed later
+    this.codeInput.node.maxLength = 4
+
     this.joinBtn = this.add
-      .text(centerX, height * 0.65, '[ JOIN ROOM ]', {
+      .text(centerX, height * 0.72, '[ JOIN ROOM ]', {
         fontSize: '24px',
         color: '#0ff',
       })
       .setOrigin(0.5)
       .setInteractive()
 
-    // Lobby Status (The text in your 4th screenshot)
-    // We use wordWrap to ensure it doesn't bleed off the edges
     this.lobbyText = this.add
-      .text(centerX, height * 0.65, '', {
+      .text(centerX, height * 0.72, '', {
         fontSize: '22px',
         color: '#ff0',
         align: 'center',
@@ -66,10 +80,18 @@ export class MenuScene extends Scene {
       })
       .setOrigin(0.5)
 
+    // --- LÓGICA DE CLIQUES ---
+
+    // Lógica do Toggle (Gira entre 2, 3 e 4)
+    this.playersToggleBtn.on('pointerdown', () => {
+      this.roomSize = this.roomSize >= MAX_ROOM_SIZE ? MIN_ROOM_SIZE : this.roomSize + 1
+      this.playersToggleBtn.setText(`< PLAYERS: ${this.roomSize} >`)
+    })
+
     this.createBtn.on('pointerdown', () => {
       const name = (this.nameInput.node as HTMLInputElement).value
       if (name.trim()) {
-        socket.emit('createRoom', name)
+        socket.emit('createRoom', name, this.roomSize)
       } else {
         alert('Please enter a name first!')
       }
@@ -92,10 +114,8 @@ export class MenuScene extends Scene {
     })
 
     socket.on('roomJoined', (roomData) => {
-      // GUEST: Save the data, but DON'T start the scene yet!
       this.mySavedRoomData = roomData
       this.showLobbyUI(roomData.code)
-      console.log('Joined lobby, waiting for host or 2nd player...')
     })
 
     socket.on('error', (msg) => {
@@ -103,22 +123,24 @@ export class MenuScene extends Scene {
     })
 
     socket.on('gameStarted', () => {
-      // BOTH: Once the server says the room is full/ready, everyone enters at once
       if (this.mySavedRoomData) {
         this.cleanupAndStart(this.mySavedRoomData)
       }
     })
   }
 
-  // Helper to hide buttons and show the code
   private showLobbyUI(code: string) {
     this.nameInput.setVisible(false)
     this.codeInput.setVisible(false)
     this.createBtn.setVisible(false)
     this.joinBtn.setVisible(false)
+    this.playersToggleBtn.setVisible(false) // Esconde o seletor também
 
-    // Update the existing lobbyText instead of creating a new one
-    this.lobbyText.setText(`LOBBY: ${code}\nWaiting for all players...`)
+    // Como o maxPlayers agora vem do servidor, podemos mostrar no lobby!
+    const currentPlayers = Object.keys(this.mySavedRoomData.players).length
+    this.lobbyText.setText(
+      `LOBBY: ${code}\nPlayers: ${currentPlayers}/${this.mySavedRoomData.size}\nWaiting for all players...`
+    )
   }
 
   private cleanupAndStart(roomData: RoomData) {

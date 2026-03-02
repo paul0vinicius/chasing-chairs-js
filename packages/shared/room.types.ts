@@ -9,4 +9,5 @@ export interface RoomData {
   chair: Chair
   status: RoomStatus
   mapData: number[][]
+  size: number
 }

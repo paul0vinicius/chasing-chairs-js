@@ -1,7 +1,7 @@
 import { Direction, Position } from './position.types'
 
 export interface ClientToServerEvents {
-  createRoom: (playerName: string) => void
+  createRoom: (playerName: string, roomSize: number) => void
   joinRoom: (roomCode: string, playerName: string) => void
   restartRound: (roomCode: string) => void
 

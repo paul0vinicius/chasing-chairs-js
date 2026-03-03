@@ -6,6 +6,7 @@ export const INITIAL_STATE_PLAYER: Omit<Player, 'id' | 'name'> = {
   position: { x: 0, y: 0 },
   speed: 1,
   score: 0,
+  isReadyToPlayAgain: false,
 }
 
 export const INITIAL_STATE_CHAIR: Chair = {

@@ -44,11 +44,6 @@ export class MainScene extends Scene {
     tileGraphic.strokeRect(0, 0, 32, 32)
     tileGraphic.generateTexture('tileTexture', 32, 32)
 
-    const remoteGraphic = this.make.graphics({ x: 0, y: 0 })
-    remoteGraphic.fillStyle(0xff0000, 1)
-    remoteGraphic.fillRect(2, 2, 28, 28)
-    remoteGraphic.generateTexture('remoteTexture', 32, 32)
-
     const chairGraphic = this.make.graphics({ x: 0, y: 0 })
     chairGraphic.fillStyle(0xffff00, 1)
     chairGraphic.fillRect(4, 4, 24, 24)
@@ -89,7 +84,7 @@ export class MainScene extends Scene {
     this.players.set(myId, localPlayer)
 
     // 3. Adiciona os jogadores remotos (que também já vêm com a posição correta)
-    Object.values(this.currentRoom.players).forEach((p: any) => {
+    Object.values(this.currentRoom.players).forEach((p) => {
       if (p.id !== myId) this.addRemotePlayer(p)
     })
 
@@ -119,6 +114,10 @@ export class MainScene extends Scene {
         if (!this.players.has(p.id)) this.addRemotePlayer(p)
       })
 
+      if (this.currentRoom.isMusicPlaying) {
+        this.players.forEach((p) => p.dance())
+      }
+
       this.refreshScoreboard(serverPlayers)
     })
 
@@ -130,11 +129,6 @@ export class MainScene extends Scene {
         this.chair.destroy()
         this.chair = null
       }
-
-      // 2. Limpa o "brilho" de vencedor de todos os jogadores para a nova rodada
-      this.players.forEach((player) => {
-        player.clearTint()
-      })
 
       // 3. (Opcional) Mostra um banner de "Música começando..."
       this.uiManager.showBanner('A MÚSICA VAI COMEÇAR!')
@@ -183,26 +177,18 @@ export class MainScene extends Scene {
     })
 
     this.events.on('net:musicStarted', (data: { url: string }) => {
-      const id = this.socketHandler.id
-      if (id) {
-        const p = this.players.get(id)
-        if (p) {
-          p.dance()
-        }
-      }
+      this.players.forEach((player) => {
+        player.dance()
+      })
 
       this.uiManager.handleMusic(data.url, this.currentRoom.code)
     })
 
     this.events.on('net:musicStopped', () => {
       console.log('[Audio] Parando a música porque a cadeira nasceu!')
-      const id = this.socketHandler.id
-      if (id) {
-        const p = this.players.get(id)
-        if (p) {
-          p.walk()
-        }
-      }
+      this.players.forEach((player) => {
+        player.walk()
+      })
       this.uiManager.stopMusic()
     })
 
@@ -218,7 +204,6 @@ export class MainScene extends Scene {
       console.log('[Game] A partida foi reiniciada do zero!')
 
       this.refreshScoreboard(players)
-      this.players.forEach((player) => player.clearTint())
     })
   }
 
@@ -259,10 +244,6 @@ export class MainScene extends Scene {
 
       this.socketHandler.sendSat(this.currentRoom.code)
 
-      // Feedback visual e desativa a cadeira localmente para evitar spam
-      const myPlayer = this.players.get(this.socketHandler.id)
-      if (myPlayer) myPlayer.setWinnerTint()
-
       this.chair.destroy()
       this.chair = null
     }
@@ -293,9 +274,6 @@ export class MainScene extends Scene {
       this.chair.destroy()
       this.chair = null
     }
-
-    // Limpa a cor de todo mundo
-    this.players.forEach((player) => player.clearTint())
   }
 
   private addRemotePlayer(data: any) {
@@ -306,9 +284,11 @@ export class MainScene extends Scene {
       this.gridEngine,
       data.id,
       data.position,
-      'remoteTexture',
+      'karen',
       this.mazeManager
     )
+
+    remotePlayer.setRandomColor(this.players.size)
     this.players.set(data.id, remotePlayer)
   }
 

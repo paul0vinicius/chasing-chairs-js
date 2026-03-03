@@ -25,6 +25,13 @@ const WALKING_ANIMATION_MAPPING = {
   },
 }
 
+const GUEST_COLORS = [
+  0xff8888, // Vermelho claro
+  0x88ff88, // Verde claro
+  0x8888ff, // Azul claro
+  0xffff88, // Amarelo claro
+]
+
 export class Player {
   public id: string
   private _sprite: Phaser.GameObjects.Sprite
@@ -91,6 +98,13 @@ export class Player {
     this.gridEngine.setWalkingAnimationMapping(this.id, undefined)
     this._sprite.play('karen-sits')
     this.gridEngine.stopMovement(this.id)
+  }
+
+  public setRandomColor(playerOrder: number) {
+    const colorIndex = playerOrder % GUEST_COLORS.length
+    const tintColor = GUEST_COLORS[colorIndex]
+
+    this._sprite.setTint(tintColor)
   }
 
   public get sprite() {

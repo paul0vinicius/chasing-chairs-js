@@ -12,4 +12,5 @@ export interface RoomData {
   size: number
   rounds: number
   currentRound: number
+  isMusicPlaying: boolean
 }

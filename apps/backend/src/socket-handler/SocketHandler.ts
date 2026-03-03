@@ -184,6 +184,7 @@ export class SocketHandler {
     const musicUrl = await this.getRandomMusic()
     if (musicUrl) {
       this.io.to(roomCode).emit('musicStarted', { url: musicUrl })
+      this.roomManager.getRoom(roomCode).isMusicPlaying = true
     }
 
     const minDelay = 8_000
@@ -202,6 +203,7 @@ export class SocketHandler {
       // 1. DISPARA OS DOIS EVENTOS JUNTOS:
       // Isso garante que a música pare NO MOMENTO exato em que a cadeira surge.
       this.io.to(roomCode).emit('musicStopped')
+      this.roomManager.getRoom(roomCode).isMusicPlaying = false
       this.io.to(roomCode).emit('chairSpawned', currentRoom.chair.position)
 
       SocketHandler.roomTimeouts.delete(roomCode)

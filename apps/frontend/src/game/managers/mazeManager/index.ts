@@ -15,7 +15,7 @@ export class MazeManager {
     return this._worldContainer
   }
 
-  public buildMaze(mapData: number[][]) {
+  public buildMaze(mapData: number[][], backgroundId: string) {
     const { width, height } = this._scene.scale
 
     const startX = width / 4
@@ -29,11 +29,16 @@ export class MazeManager {
 
     if (tileset) {
       // A camada continua no 0,0 local do container
-      const layer = map.createLayer(0, tileset, startX, startY)
+      const layer = map.createLayer(0, tileset, startX * 32, startY * 32)
+      // this._scene.add.image(startX, startY, backgroundId).setDepth(-1).setScale(2);
+      this._scene.add.tileSprite(0, 0, width, height, backgroundId).setOrigin(0, 0).setDepth(-1)
 
-      layer!.layer.data.forEach((row) => {
-        row.forEach((tile) => {
+      layer!.layer.data.forEach((row, y) => {
+        row.forEach((tile, x) => {
           if (tile.index === 1) {
+            this._scene.add
+              .image(startX + (x * 32 + 16), startY + (y * 32 + 16), 'wall')
+              .setDepth(0)
             tile.properties.ge_collide = true
           }
         })

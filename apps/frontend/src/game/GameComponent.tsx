@@ -21,9 +21,13 @@ export const GameComponent = () => {
           height: '100dvh',
         },
         pixelArt: true,
-        antialias: false,
         dom: {
           createContainer: true,
+        },
+        render: {
+          antialias: false,
+          pixelArt: true,
+          roundPixels: true,
         },
         scene: [MenuScene, MainScene],
         backgroundColor: '#1a1a1a',

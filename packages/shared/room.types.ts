@@ -13,4 +13,5 @@ export interface RoomData {
   rounds: number
   currentRound: number
   isMusicPlaying: boolean
+  backgroundId: string
 }

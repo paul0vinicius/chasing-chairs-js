@@ -48,15 +48,8 @@ export class MainScene extends Scene {
     tileGraphic.strokeRect(0, 0, 32, 32)
     tileGraphic.generateTexture('tileTexture', 32, 32)
 
-    const chairGraphic = this.make.graphics({ x: 0, y: 0 })
-    chairGraphic.fillStyle(0xffff00, 1)
-    chairGraphic.fillRect(4, 4, 24, 24)
-    chairGraphic.generateTexture('chairTexture', 32, 32)
-
-    this.load.audio('alert', 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg')
-
     this.assetsManager = new AssetsManager(this, this.gridEngine)
-    this.assetsManager.loadPlayersAssets()
+    this.assetsManager.loadAll()
   }
 
   create() {
@@ -70,7 +63,7 @@ export class MainScene extends Scene {
     this.animationManager.createPlayersAnimation()
 
     // 1. Constrói o labirinto com o mapa gerado pelo servidor!
-    this.mazeManager.buildMaze(this.currentRoom.mapData)
+    this.mazeManager.buildMaze(this.currentRoom.mapData, this.currentRoom.backgroundId)
 
     // 2. O backend já nos deu uma posição válida (myData.position)
     const myId = this.socketHandler.id!

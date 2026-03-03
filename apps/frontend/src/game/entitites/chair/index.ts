@@ -9,7 +9,10 @@ export class Chair {
     this.position = { x, y }
 
     // Nasce baseada na grade de 32px local
-    this.sprite = scene.add.sprite(x * 32, y * 32, 'chairTexture').setOrigin(0)
+    this.sprite = scene.add
+      .sprite(x * 32, y * 32, 'chair')
+      .setOrigin(0)
+      .setDepth(-1)
 
     // Entra na caixinha para ser redimensionada e movida junto
     mazeManager.worldContainer.add(this.sprite)

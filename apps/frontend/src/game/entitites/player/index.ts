@@ -51,7 +51,7 @@ export class Player {
     this._canMove = true
 
     // Nasce no 0,0 local
-    this._sprite = scene.add.sprite(0, 0, texture).setOrigin(0.5, 0.8)
+    this._sprite = scene.add.sprite(0, 0, texture).setOrigin(0.5, 0.8).setDepth(1)
 
     // O Container gerencia a posição real e o tamanho na tela
     mazeManager.worldContainer.add(this._sprite)

@@ -218,6 +218,13 @@ export class SocketHandler {
       'marina sena coisas naturais',
       'anitta funk generation',
       'slayyyter',
+      'louder please rose gray',
+      'cosmica grag queen',
+      'stateside zara larson pink panthress',
+      'bibi babydoll',
+      'lady gaga mayhem',
+      'duda beat tara e tal',
+      'carnaval eletronico daniela mercury',
     ]
     const query = queries[Math.floor(Math.random() * queries.length)]
 

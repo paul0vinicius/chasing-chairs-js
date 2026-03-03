@@ -62,6 +62,10 @@ export class RoomManager {
     // 1. Clonando o mapa para que uma sala não altere as paredes da outra
     const selectedMap = JSON.parse(JSON.stringify(AVAILABLE_MAPS[randomMapIndex]))
 
+    // No RoomManager.ts, dentro do createRoom:
+    const availableBackgrounds = ['garden', 'grass', 'mud_terrain', 'desert', 'golden_tiles']
+    const randomBg = availableBackgrounds[Math.floor(Math.random() * availableBackgrounds.length)]
+
     const newRoom: RoomData = {
       code,
       players: {},
@@ -73,6 +77,7 @@ export class RoomManager {
       rounds,
       currentRound: 0,
       isMusicPlaying: false,
+      backgroundId: randomBg,
     }
 
     const hostSpawn = this.getRandomSpawnPosition(newRoom)

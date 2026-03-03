@@ -72,6 +72,7 @@ export class RoomManager {
       size,
       rounds,
       currentRound: 0,
+      isMusicPlaying: false,
     }
 
     const hostSpawn = this.getRandomSpawnPosition(newRoom)

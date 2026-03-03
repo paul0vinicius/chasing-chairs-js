@@ -35,6 +35,10 @@ export class MainScene extends Scene {
 
   init(data: { room: RoomData }) {
     this.currentRoom = data.room
+
+    if (this.currentRoom.isMusicPlaying) {
+      this.players.forEach((p) => p.dance())
+    }
   }
 
   preload() {

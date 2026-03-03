@@ -3,7 +3,15 @@ import { GridEngine, Direction } from 'grid-engine'
 import { RoomData } from '@chasing-chairs/shared'
 import { socket } from './socket'
 import { calculateNextPos } from '../utils/gridUtils'
-import { SocketHandler, UIManager, MazeManager, ScoreboardManager, ScoreData } from './managers'
+import {
+  SocketHandler,
+  UIManager,
+  MazeManager,
+  ScoreboardManager,
+  ScoreData,
+  AssetsManager,
+  AnimationManager,
+} from './managers'
 import { Player, Chair } from './entitites'
 
 export class MainScene extends Scene {
@@ -11,6 +19,8 @@ export class MainScene extends Scene {
   private socketHandler!: SocketHandler
   private uiManager!: UIManager
   private mazeManager!: MazeManager
+  private assetsManager!: AssetsManager
+  private animationManager!: AnimationManager
   private scoreboardManager!: ScoreboardManager
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
 
@@ -34,11 +44,6 @@ export class MainScene extends Scene {
     tileGraphic.strokeRect(0, 0, 32, 32)
     tileGraphic.generateTexture('tileTexture', 32, 32)
 
-    const playerGraphic = this.make.graphics({ x: 0, y: 0 })
-    playerGraphic.fillStyle(0x00ff00, 1)
-    playerGraphic.fillRect(2, 2, 28, 28)
-    playerGraphic.generateTexture('playerTexture', 32, 32)
-
     const remoteGraphic = this.make.graphics({ x: 0, y: 0 })
     remoteGraphic.fillStyle(0xff0000, 1)
     remoteGraphic.fillRect(2, 2, 28, 28)
@@ -50,6 +55,9 @@ export class MainScene extends Scene {
     chairGraphic.generateTexture('chairTexture', 32, 32)
 
     this.load.audio('alert', 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg')
+
+    this.assetsManager = new AssetsManager(this, this.gridEngine)
+    this.assetsManager.loadPlayersAssets()
   }
 
   create() {
@@ -58,6 +66,9 @@ export class MainScene extends Scene {
     this.mazeManager = new MazeManager(this, this.gridEngine)
     this.scoreboardManager = new ScoreboardManager(this, this.socketHandler.id!)
     this.cursors = this.input.keyboard!.createCursorKeys()
+    this.animationManager = new AnimationManager(this, this.gridEngine)
+
+    this.animationManager.createPlayersAnimation()
 
     // 1. Constrói o labirinto com o mapa gerado pelo servidor!
     this.mazeManager.buildMaze(this.currentRoom.mapData)
@@ -72,7 +83,7 @@ export class MainScene extends Scene {
       this.gridEngine,
       myId,
       myData.position,
-      'playerTexture',
+      'karen',
       this.mazeManager
     )
     this.players.set(myId, localPlayer)
@@ -171,12 +182,27 @@ export class MainScene extends Scene {
       }
     })
 
-    this.events.on('net:musicStarted', (data: { url: string }) =>
+    this.events.on('net:musicStarted', (data: { url: string }) => {
+      const id = this.socketHandler.id
+      if (id) {
+        const p = this.players.get(id)
+        if (p) {
+          p.dance()
+        }
+      }
+
       this.uiManager.handleMusic(data.url, this.currentRoom.code)
-    )
+    })
 
     this.events.on('net:musicStopped', () => {
       console.log('[Audio] Parando a música porque a cadeira nasceu!')
+      const id = this.socketHandler.id
+      if (id) {
+        const p = this.players.get(id)
+        if (p) {
+          p.walk()
+        }
+      }
       this.uiManager.stopMusic()
     })
 
@@ -258,6 +284,11 @@ export class MainScene extends Scene {
       id === 'RESET' ? 'ROUND RESETTING...' : isMe ? 'YOU WON!' : 'TOO SLOW!'
     )
 
+    const player = this.players.get(id)
+    if (player) {
+      player.sit()
+    }
+
     if (this.chair) {
       this.chair.destroy()
       this.chair = null
@@ -282,7 +313,7 @@ export class MainScene extends Scene {
   }
 
   update() {
-    if (!this.socketHandler?.id) return
+    if (!this.socketHandler?.id || !this.players.get(this.socketHandler.id)?.canMove) return
 
     // CORREÇÃO DO BUG: JustDown garante que o evento dispare apenas 1 vez por clique
     // O jogador precisa soltar a tecla e apertar de novo para andar mais um bloco.

@@ -43,8 +43,8 @@ body {
 /* 3. O Canvas obedecendo cegamente o container */
 canvas {
   display: block;
+  image-rendering: pixelated;
   width: 100% !important;
   height: 100% !important;
-  object-fit: fill;
-  image-rendering: pixelated;
+  object-fit: fill; /* Força o preenchimento sem letterboxing */
 }

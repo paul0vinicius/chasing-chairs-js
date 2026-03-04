@@ -39,7 +39,12 @@ export class AssetsManager {
     this._scene.load.audio('alert', 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg')
   }
 
-  loadObjectsAssets() {}
+  loadObjectsAssets() {
+    const tileGraphic = this._scene.make.graphics({ x: 0, y: 0 })
+    tileGraphic.lineStyle(1, 0xffffff, 0.2)
+    tileGraphic.strokeRect(0, 0, 32, 32)
+    tileGraphic.generateTexture('tileTexture', 32, 32)
+  }
 
   loadAll() {
     this.loadPlayersAssets()

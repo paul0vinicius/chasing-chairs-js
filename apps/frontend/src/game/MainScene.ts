@@ -9,7 +9,6 @@ import {
   MazeManager,
   ScoreboardManager,
   ScoreData,
-  AssetsManager,
   AnimationManager,
 } from './managers'
 import { Player, Chair } from './entitites'
@@ -19,7 +18,6 @@ export class MainScene extends Scene {
   private socketHandler!: SocketHandler
   private uiManager!: UIManager
   private mazeManager!: MazeManager
-  private assetsManager!: AssetsManager
   private animationManager!: AnimationManager
   private scoreboardManager!: ScoreboardManager
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
@@ -39,17 +37,6 @@ export class MainScene extends Scene {
     if (this.currentRoom.isMusicPlaying) {
       this.players.forEach((p) => p.dance())
     }
-  }
-
-  preload() {
-    // Mantenha o seu código de preload gerando texturas e áudio
-    const tileGraphic = this.make.graphics({ x: 0, y: 0 })
-    tileGraphic.lineStyle(1, 0xffffff, 0.2)
-    tileGraphic.strokeRect(0, 0, 32, 32)
-    tileGraphic.generateTexture('tileTexture', 32, 32)
-
-    this.assetsManager = new AssetsManager(this, this.gridEngine)
-    this.assetsManager.loadAll()
   }
 
   create() {

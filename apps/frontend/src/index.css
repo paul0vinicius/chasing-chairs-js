@@ -1,4 +1,3 @@
-/* COMPORTAMENTO PADRÃO: BROWSER (Safari/Chrome) */
 html,
 body,
 #root {
@@ -7,7 +6,6 @@ body,
   width: 100dvw;
   height: 100dvh;
   overflow: hidden;
-  /* Mudamos de #000 para a cor do jogo. Máscara perfeita para engasgos do SO */
   background-color: #1a1a1a;
   touch-action: none;
   -webkit-text-size-adjust: none;
@@ -23,19 +21,24 @@ body,
   overscroll-behavior: none;
 }
 
-/* Cria uma extensão visual que "vaza" para o rodapé */
 #game-container::after,
 #root::after {
   content: '';
   position: absolute;
-  /* Posiciona o elemento exatamente onde o 100dvh termina */
   top: 100%;
   left: 0;
   width: 100%;
-  /* A altura exata da margem de segurança do iOS */
   height: env(safe-area-inset-bottom);
-  background-color: #1a1a1a; /* Cor do fundo do seu mapa/jogo */
-  z-index: -1; /* Garante que fique atrás de qualquer UI */
+  background-color: #1a1a1a;
+  z-index: -1;
+}
+
+@media screen and (display-mode: fullscreen) {
+  #game-container {
+    height: 100vh;
+    padding: 0;
+    margin: 0;
+  }
 }
 
 canvas {

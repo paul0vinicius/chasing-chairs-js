@@ -17,8 +17,8 @@ export const GameComponent = () => {
           mode: Phaser.Scale.RESIZE,
           autoCenter: Phaser.Scale.CENTER_BOTH,
           expandParent: true,
-          width: '100dvw',
-          height: '100dvh',
+          width: '100%',
+          height: '100%',
         },
         pixelArt: true,
         dom: {

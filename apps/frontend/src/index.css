@@ -13,18 +13,10 @@ body,
   -webkit-text-size-adjust: none;
 }
 
-#game-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100dvw;
-  height: 100dvh;
-  background-color: #1a1a1a;
-  overscroll-behavior: none;
-}
-
 /* Cria uma extensão visual que "vaza" para o rodapé */
-#game-container::after {
+html,
+body,
+#root::after {
   content: '';
   position: absolute;
   /* Posiciona o elemento exatamente onde o 100dvh termina */
@@ -35,6 +27,16 @@ body,
   height: env(safe-area-inset-bottom);
   background-color: #1a1a1a; /* Cor do fundo do seu mapa/jogo */
   z-index: -1; /* Garante que fique atrás de qualquer UI */
+}
+
+#game-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100dvw;
+  height: 100dvh;
+  background-color: #1a1a1a;
+  overscroll-behavior: none;
 }
 
 canvas {

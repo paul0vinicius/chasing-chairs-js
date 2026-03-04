@@ -1,4 +1,3 @@
-/* Bloqueia qualquer movimento da página no iPhone */
 html,
 body,
 #root {
@@ -8,14 +7,12 @@ body,
   height: 100dvh;
   overflow: hidden;
   position: fixed;
+  background-color: #000;
   touch-action: none;
   -webkit-text-size-adjust: none;
-  background-color: #1a1a1a;
 }
 
 canvas {
-  /* O Phaser cuida das dimensões. Deixamos apenas regras de renderização e touch */
-  image-rendering: pixelated;
   display: block;
-  touch-action: none;
+  image-rendering: pixelated; /* Mantém a Karen nítida */
 }

@@ -9,14 +9,15 @@ export const GameComponent = () => {
   const gameInstance = useRef<Phaser.Game | null>(null)
 
   useEffect(() => {
+    // Garante que o jogo só seja criado UMA vez
     if (gameContainerRef.current && !gameInstance.current) {
-      gameInstance.current = new Phaser.Game({
+      
+      const config: Phaser.Types.Core.GameConfig = {
         type: Phaser.AUTO,
         parent: gameContainerRef.current,
         scale: {
           mode: Phaser.Scale.RESIZE,
           autoCenter: Phaser.Scale.CENTER_BOTH,
-          expandParent: true,
           width: '100%',
           height: '100%',
         },
@@ -40,9 +41,12 @@ export const GameComponent = () => {
             },
           ],
         },
-      })
+      }
+
+      gameInstance.current = new Phaser.Game(config)
     }
-  }, [])
+
+  }, []) 
 
   return (
     <div
@@ -55,6 +59,7 @@ export const GameComponent = () => {
         position: 'fixed',
         top: 0,
         left: 0,
+        backgroundColor: '#000',
       }}
     />
   )

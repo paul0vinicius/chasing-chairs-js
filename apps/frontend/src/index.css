@@ -1,7 +1,7 @@
 /* Bloqueia qualquer movimento da página no iPhone */
 html,
 body,
-#game-container {
+#root {
   margin: 0;
   padding: 0;
   width: 100dvw;

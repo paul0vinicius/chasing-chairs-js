@@ -1,45 +1,46 @@
+/* Limpa o terreno e remove o fixed da raiz */
 html,
 body,
 #root {
   margin: 0;
   padding: 0;
-  width: 100dvw;
-  height: calc(100dvh + env(safe-area-inset-bottom));
+  width: 100%;
+  height: 100%;
   overflow: hidden;
-  position: fixed;
   background-color: #000;
   touch-action: none;
   -webkit-text-size-adjust: none;
 }
 
+/* Opcional: O seu blur, mas agora absoluto */
 #root::before {
   content: '';
   display: block;
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent background */
-  backdrop-filter: blur(10px); /* Apply blur effect */
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
   z-index: 10;
+  pointer-events: none; /* Garante que não bloqueie os cliques do jogo */
 }
 
+/* O container do jogo ancorado nas 4 pontas */
 #game-container {
-  width: 100dvw;
-  height: 100dvh;
-  margin-bottom: calc(env(safe-area-inset-bottom) * -1);
-  padding-bottom: env(safe-area-inset-bottom);
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
-  background-color: #1a1a1a;
+  right: 0;
+  bottom: 0;
+  background-color: red;
   overscroll-behavior: none;
 }
 
 canvas {
   display: block;
-  image-rendering: pixelated;
   width: 100% !important;
   height: 100% !important;
-  object-fit: fill;
+  image-rendering: pixelated;
 }

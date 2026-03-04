@@ -43,11 +43,23 @@ export const GameComponent = () => {
       }
 
       gameInstance.current = new Phaser.Game(config)
-      // Após criar o jogo, force um resize manual após um pequeno delay
-      // para garantir que o cálculo do dvh do iOS já terminou
-      setTimeout(() => {
-        gameInstance.current?.scale.refresh()
-      }, 500)
+      // O "despertador" para o Bug do iOS
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible' && gameInstance.current) {
+          // Força o Phaser a esticar o canvas novamente ao reabrir o app
+          setTimeout(() => gameInstance.current?.scale.refresh(), 100)
+        }
+      }
+
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+        if (gameInstance.current) {
+          gameInstance.current.destroy(true)
+          gameInstance.current = null
+        }
+      }
     }
   }, [])
 

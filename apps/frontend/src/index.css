@@ -1,3 +1,4 @@
+/* COMPORTAMENTO PADRÃO: BROWSER (Safari/Chrome) */
 html,
 body,
 #root {
@@ -6,7 +7,8 @@ body,
   width: 100dvw;
   height: 100dvh;
   overflow: hidden;
-  background-color: #000;
+  /* Mudamos de #000 para a cor do jogo. Máscara perfeita para engasgos do SO */
+  background-color: #1a1a1a;
   touch-action: none;
   -webkit-text-size-adjust: none;
 }
@@ -29,21 +31,19 @@ canvas {
   image-rendering: pixelated;
 }
 
+/* COMPORTAMENTO PWA: APP NATIVO (Tela Inicial) */
 @media all and (display-mode: standalone) {
   #game-container {
     height: calc(100vh + env(safe-area-inset-bottom));
     width: 100vw;
   }
+
   html,
-  body,
+  body {
+    background-color: #1a1a1a;
+  }
+
   #root {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background-color: #000;
-    touch-action: none;
-    -webkit-text-size-adjust: none;
+    overflow: visible;
   }
 }

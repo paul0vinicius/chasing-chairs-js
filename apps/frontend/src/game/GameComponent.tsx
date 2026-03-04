@@ -51,21 +51,7 @@ export const GameComponent = () => {
     }
   }, [])
 
-  return (
-    <div
-      ref={gameContainerRef}
-      id="game-container"
-      style={{
-        width: '100dvw',
-        height: '100dvh',
-        overflow: 'hidden',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        backgroundColor: '#000',
-      }}
-    />
-  )
+  return <div ref={gameContainerRef} id="game-container" />
 }
 
 export default GameComponent

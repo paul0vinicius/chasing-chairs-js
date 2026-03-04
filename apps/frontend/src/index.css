@@ -4,8 +4,7 @@ body,
   margin: 0;
   padding: 0;
   width: 100dvw;
-  height: 100dvh;
-  min-height: 100%;
+  height: calc(100dvh + env(safe-area-inset-bottom));
   overflow: hidden;
   position: fixed;
   background-color: #000;
@@ -27,8 +26,7 @@ body,
 
 #game-container {
   width: 100dvw;
-  height: 100dvh;
-  min-height: 100%;
+  height: calc(100dvh + env(safe-area-inset-bottom));
   position: fixed;
   top: 0;
   left: 0;

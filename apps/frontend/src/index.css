@@ -9,7 +9,8 @@ body,
   overflow: hidden;
   position: fixed;
   touch-action: none;
-  -webkit-text-size-adjust: none; /* Impede o iOS de aumentar a fonte sozinho */
+  -webkit-text-size-adjust: none;
+  background-color: #1a1a1a;
 }
 
 canvas {

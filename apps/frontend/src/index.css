@@ -21,6 +21,12 @@ body,
   overscroll-behavior: none;
 }
 
+@media all and (display-mode: standalone) {
+  #game-container {
+    height: calc(100vh + env(safe-area-inset-bottom));
+  }
+}
+
 canvas {
   display: block;
   width: 100% !important;

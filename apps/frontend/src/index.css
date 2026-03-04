@@ -26,12 +26,12 @@ body,
 
 #game-container {
   width: 100dvw;
-  height: calc(100dvh + env(safe-area-inset-bottom));
+  height: 100dvh;
+  margin-bottom: calc(env(safe-area-inset-bottom) * -1);
+  padding-bottom: env(safe-area-inset-bottom);
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
   background-color: #1a1a1a;
   overscroll-behavior: none;
 }

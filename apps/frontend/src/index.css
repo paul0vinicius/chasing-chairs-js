@@ -14,8 +14,6 @@ body,
 }
 
 /* Cria uma extensão visual que "vaza" para o rodapé */
-html,
-body,
 #root::after {
   content: '';
   position: absolute;

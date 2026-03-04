@@ -23,21 +23,6 @@ body {
   /* 🚨 O overflow: hidden foi retirado daqui para parar de "cortar" o jogo! */
 }
 
-/* O blur overlay da interface */
-#root::before {
-  content: '';
-  display: block;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(10px);
-  z-index: 10;
-  pointer-events: none;
-}
-
 /* 2. O Container do Jogo Esticado */
 #game-container {
   position: absolute;

@@ -11,7 +11,6 @@ export const GameComponent = () => {
   useEffect(() => {
     // Garante que o jogo só seja criado UMA vez
     if (gameContainerRef.current && !gameInstance.current) {
-      
       const config: Phaser.Types.Core.GameConfig = {
         type: Phaser.AUTO,
         parent: gameContainerRef.current,
@@ -20,6 +19,7 @@ export const GameComponent = () => {
           autoCenter: Phaser.Scale.CENTER_BOTH,
           width: '100%',
           height: '100%',
+          expandParent: true,
         },
         pixelArt: true,
         dom: {
@@ -45,8 +45,7 @@ export const GameComponent = () => {
 
       gameInstance.current = new Phaser.Game(config)
     }
-
-  }, []) 
+  }, [])
 
   return (
     <div

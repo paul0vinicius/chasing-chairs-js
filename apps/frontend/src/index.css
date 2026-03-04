@@ -23,23 +23,24 @@ body,
   overscroll-behavior: none;
 }
 
+/* Cria uma extensão visual que "vaza" para o rodapé */
+#game-container::after {
+  content: '';
+  position: absolute;
+  /* Posiciona o elemento exatamente onde o 100dvh termina */
+  top: 100%;
+  left: 0;
+  width: 100%;
+  /* A altura exata da margem de segurança do iOS */
+  height: env(safe-area-inset-bottom);
+  background-color: #1a1a1a; /* Cor do fundo do seu mapa/jogo */
+  z-index: -1; /* Garante que fique atrás de qualquer UI */
+}
+
 canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
   object-fit: fill;
   image-rendering: pixelated;
-}
-
-@media all and (display-mode: standalone) {
-  #game-container {
-    height: calc(100vh + env(safe-area-inset-bottom));
-    width: 100vw;
-  }
-
-  #root {
-    height: 100%;
-    width: 100%;
-    overflow: visible;
-  }
 }

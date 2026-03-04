@@ -9,6 +9,18 @@ export const GameComponent = () => {
   const gameInstance = useRef<Phaser.Game | null>(null)
 
   useEffect(() => {
+    // 1. Detecta o valor da Safe Area Inferior (geralmente 34px no iPhone moderno)
+    // Criamos um elemento temporário para medir o env() com precisão
+    const div = document.createElement('div')
+    div.style.paddingBottom = 'env(safe-area-inset-bottom)'
+    document.body.appendChild(div)
+    const safeAreaBottom = parseInt(window.getComputedStyle(div).paddingBottom)
+    document.body.removeChild(div)
+
+    // 2. Salva esse valor como uma variável CSS fixa no :root
+    // Mesmo que o iOS "esqueça" o env(), o --fixed-safe-area-bottom continuará lá
+    document.documentElement.style.setProperty('--fixed-safe-area-bottom', `${safeAreaBottom}px`)
+
     // Garante que o jogo só seja criado UMA vez
     if (gameContainerRef.current && !gameInstance.current) {
       const config: Phaser.Types.Core.GameConfig = {
@@ -43,41 +55,6 @@ export const GameComponent = () => {
       }
 
       gameInstance.current = new Phaser.Game(config)
-      // O "despertador" tunado para o tempo do iOS
-      const forcePhaserResize = () => {
-        if (gameInstance.current && gameContainerRef.current) {
-          // Captura o tamanho REAL da div depois que o iOS terminou de esticar
-          const width = gameContainerRef.current.clientWidth
-          const height = gameContainerRef.current.clientHeight
-
-          // Força o motor do Phaser a redesenhar a projeção da câmera e o canvas
-          gameInstance.current.scale.resize(width, height)
-        }
-      }
-
-      const handleVisibilityChange = () => {
-        if (document.visibilityState === 'visible') {
-          // 500ms é o "sweet spot" para o iOS terminar a animação de resume
-          setTimeout(forcePhaserResize, 500)
-        }
-      }
-
-      const handleWindowResize = () => {
-        // Pequeno debounce natural para quando o usuário vira o celular ou abre o teclado
-        setTimeout(forcePhaserResize, 100)
-      }
-
-      document.addEventListener('visibilitychange', handleVisibilityChange)
-      window.addEventListener('resize', handleWindowResize)
-
-      return () => {
-        document.removeEventListener('visibilitychange', handleVisibilityChange)
-        window.removeEventListener('resize', handleWindowResize)
-        if (gameInstance.current) {
-          gameInstance.current.destroy(true)
-          gameInstance.current = null
-        }
-      }
     }
   }, [])
 

@@ -31,18 +31,14 @@ canvas {
   image-rendering: pixelated;
 }
 
-/* COMPORTAMENTO PWA: APP NATIVO (Tela Inicial) */
 @media all and (display-mode: standalone) {
   #game-container {
-    height: calc(100vh + env(safe-area-inset-bottom));
+    /* Substituímos o env() instável pela nossa variável fixa de JS */
+    height: calc(100vh + var(--fixed-safe-area-bottom, 0px));
     width: 100vw;
   }
 
-  html,
-  body {
-    background-color: #1a1a1a;
-  }
-
+  /* Mantemos o overflow visible para garantir que o root não corte nada */
   #root {
     overflow: visible;
   }

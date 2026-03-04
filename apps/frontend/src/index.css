@@ -10,6 +10,21 @@ body,
   background-color: #000;
   touch-action: none;
   -webkit-text-size-adjust: none;
+  padding-top: constant(safe-area-inset-top); /* For older iOS versions */
+  padding-top: env(safe-area-inset-top); /* For modern iOS versions */
+}
+
+body::before {
+  content: '';
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top);
+  background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent background */
+  backdrop-filter: blur(10px); /* Apply blur effect */
+  z-index: 10;
 }
 
 #game-container {

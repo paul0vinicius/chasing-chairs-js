@@ -1,0 +1,24 @@
+{
+  "name": "Chasing Chairs: Karen Returns",
+  "short_name": "Chasing Chairs",
+  "description": "A aventura da dança das cadeiras está de volta! Entre na sala, dance com Karen e sente na cadeira antes das inimigas.",
+  "start_url": "/?mode=standalone",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#1a1a1a",
+  "theme_color": "#4a90e2",
+  "icons": [
+    {
+      "src": "/assets/meta/icon-512-512.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/meta/icon-512-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

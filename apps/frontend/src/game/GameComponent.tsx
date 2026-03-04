@@ -44,6 +44,11 @@ export const GameComponent = () => {
       }
 
       gameInstance.current = new Phaser.Game(config)
+      // Após criar o jogo, force um resize manual após um pequeno delay
+      // para garantir que o cálculo do dvh do iOS já terminou
+      setTimeout(() => {
+        gameInstance.current?.scale.refresh()
+      }, 500)
     }
   }, [])
 

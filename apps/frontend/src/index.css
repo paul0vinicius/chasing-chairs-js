@@ -33,13 +33,13 @@ canvas {
 
 @media all and (display-mode: standalone) {
   #game-container {
-    /* Substituímos o env() instável pela nossa variável fixa de JS */
-    height: calc(100vh + var(--fixed-safe-area-bottom, 0px));
+    height: calc(100vh + env(safe-area-inset-bottom));
     width: 100vw;
   }
 
-  /* Mantemos o overflow visible para garantir que o root não corte nada */
   #root {
+    height: 100%;
+    width: 100%;
     overflow: visible;
   }
 }

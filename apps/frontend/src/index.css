@@ -14,9 +14,7 @@ body,
 }
 
 canvas {
-  /* Garante que o canvas seja tratado como uma imagem fixa */
-  max-width: 100dvw !important;
-  max-height: 100dwh !important;
+  /* O Phaser cuida das dimensões. Deixamos apenas regras de renderização e touch */
   image-rendering: pixelated;
   display: block;
   touch-action: none;

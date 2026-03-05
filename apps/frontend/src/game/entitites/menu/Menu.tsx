@@ -1,4 +1,4 @@
-import { Dispatch, FC, SetStateAction, useState } from 'react'
+import { Dispatch, FC, SetStateAction, useEffect, useRef, useState } from 'react'
 import './Menu.css'
 import { CreateRoom } from './CreateRoom'
 import { socket } from '../../socket'
@@ -17,6 +17,20 @@ type MenuState = 'MAIN' | 'CREATE_ROOM' | 'ROOM_READY' | 'ENTER_ROOM' | 'HOW_TO'
 export const Menu: FC<MenuProps> = ({ setGameState }) => {
   const [currentView, setCurrentView] = useState<MenuState>('MAIN')
   const [roomData, setRoomData] = useState<RoomData | undefined>(undefined)
+
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    audioRef.current = new Audio('/assets/audio/menu_theme.m4a')
+    audioRef.current.loop = true
+    audioRef.current.volume = 0.1
+
+    audioRef.current?.play()
+
+    return () => {
+      audioRef.current?.pause()
+    }
+  }, [])
 
   const onCreateRoom = (playerName: string, roomSize: number, rounds: number) => {
     socket.emit('createRoom', playerName, roomSize, rounds)

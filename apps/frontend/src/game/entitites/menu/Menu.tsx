@@ -6,6 +6,7 @@ import { RoomData } from '@chasing-chairs/shared'
 import { CreatedRoom } from './CreatedRoom'
 import { EventBus } from '../../eventsBus'
 import { JoinRoom } from './JoinRoom'
+import { RetroButton } from '../../../components'
 
 interface MenuProps {
   setGameState: Dispatch<SetStateAction<'menu' | 'playing'>>
@@ -24,6 +25,8 @@ export const Menu: FC<MenuProps> = ({ setGameState }) => {
   const onJoinRoom = (playerName: string, roomCode: string) => {
     socket.emit('joinRoom', roomCode, playerName)
   }
+
+  const onGoBackToMenu = () => setCurrentView('MAIN')
 
   socket.on('roomCreated', (roomData) => {
     setRoomData(roomData)
@@ -55,27 +58,31 @@ export const Menu: FC<MenuProps> = ({ setGameState }) => {
   }
 
   return (
-    <div className="menu-fullscreen-overlay">
+    <div className="bg-menu bg-cover bg-center flex flex-col items-center justify-center w-full h-full relative">
       {currentView === 'MAIN' && (
-        <div className="main-view-container">
-          <div className="title-area">
-            <h1 className="retro-title">Chasing chairs:</h1>
-            <h2 className="retro-subtitle">Karen returns!</h2>
+        <div className="flex flex-col items-center animate-fade-in">
+          <div className="text-center mb-16">
+            <h1 className="font-bayoc text-6xl md:text-8xl text-white drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] -webkit-text-stroke-1">
+              Chasing chairs:
+            </h1>
+            <h2 className="font-bayoc text-3xl md:text-5xl text-white mt-2 drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]">
+              Karen returns!
+            </h2>
           </div>
 
-          <div className="bottom-nav">
-            <button onClick={() => setCurrentView('CREATE_ROOM')}>Criar uma sala</button>
-            <button onClick={() => setCurrentView('ENTER_ROOM')}>Entrar em uma sala</button>
-            <button onClick={() => setCurrentView('HOW_TO')}>Como jogar?</button>
-            <button onClick={() => setCurrentView('CREDITS')}>Criadores</button>
+          <div className="flex flex-col md:flex-row gap-6">
+            <RetroButton onClick={() => setCurrentView('CREATE_ROOM')}>Criar Sala</RetroButton>
+            <RetroButton onClick={() => setCurrentView('ENTER_ROOM')}>Entrar</RetroButton>
           </div>
         </div>
       )}
 
       {currentView === 'CREATE_ROOM' && (
-        <CreateRoom onCreateRoom={onCreateRoom} onGoBack={() => setCurrentView('MAIN')} />
+        <CreateRoom onCreateRoom={onCreateRoom} onGoBack={onGoBackToMenu} />
       )}
-      {currentView === 'ENTER_ROOM' && <JoinRoom onJoinRoom={onJoinRoom} />}
+      {currentView === 'ENTER_ROOM' && (
+        <JoinRoom onJoinRoom={onJoinRoom} onGoBack={onGoBackToMenu} />
+      )}
       {currentView === 'ROOM_READY' && (
         <CreatedRoom
           currentplayers={roomData ? Object.keys(roomData.players).length : 0}

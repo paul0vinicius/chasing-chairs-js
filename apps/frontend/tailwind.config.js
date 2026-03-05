@@ -17,6 +17,9 @@ export default {
           cyan: '#00ffff',
         },
       },
+      backgroundImage: {
+        menu: "url('/assets/ui/menu_bg.png')",
+      },
     },
   },
   plugins: [],

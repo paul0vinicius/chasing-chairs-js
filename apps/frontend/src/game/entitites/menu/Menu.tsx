@@ -5,30 +5,44 @@ import { socket } from '../../socket'
 import { RoomData } from '@chasing-chairs/shared'
 import { CreatedRoom } from './CreatedRoom'
 import { EventBus } from '../../eventsBus'
+import { JoinRoom } from './JoinRoom'
 
 interface MenuProps {
   setGameState: Dispatch<SetStateAction<'menu' | 'playing'>>
 }
 
-type MenuState = 'MAIN' | 'CREATE_ROOM' | 'CREATED_ROOM' | 'ENTER_ROOM' | 'HOW_TO' | 'CREDITS'
+type MenuState = 'MAIN' | 'CREATE_ROOM' | 'ROOM_READY' | 'ENTER_ROOM' | 'HOW_TO' | 'CREDITS'
 
 export const Menu: FC<MenuProps> = ({ setGameState }) => {
   const [currentView, setCurrentView] = useState<MenuState>('MAIN')
   const [roomData, setRoomData] = useState<RoomData | undefined>(undefined)
 
-  const onCreateGame = (playerName: string, roomSize: number, rounds: number) => {
+  const onCreateRoom = (playerName: string, roomSize: number, rounds: number) => {
     socket.emit('createRoom', playerName, roomSize, rounds)
   }
 
-  socket.on('roomCreated', (room) => {
-    setRoomData(room)
-    setCurrentView('CREATED_ROOM')
+  const onJoinRoom = (playerName: string, roomCode: string) => {
+    socket.emit('joinRoom', roomCode, playerName)
+  }
+
+  socket.on('roomCreated', (roomData) => {
+    setRoomData(roomData)
+    setCurrentView('ROOM_READY')
   })
 
   socket.on('gameStarted', () => {
     if (roomData) {
       cleanupAndStart(roomData)
     }
+  })
+
+  socket.on('roomJoined', (roomData) => {
+    setRoomData(roomData)
+    setCurrentView('ROOM_READY')
+  })
+
+  socket.on('error', (msg) => {
+    alert(`Error: ${msg}`)
   })
 
   const cleanupAndStart = (roomData: RoomData) => {
@@ -45,8 +59,8 @@ export const Menu: FC<MenuProps> = ({ setGameState }) => {
       {currentView === 'MAIN' && (
         <div className="main-view-container">
           <div className="title-area">
-            <h1 className="retro-title">CHASING CHAIRS:</h1>
-            <h2 className="retro-subtitle">KAREN'S ADVENTURE</h2>
+            <h1 className="retro-title">Chasing chairs:</h1>
+            <h2 className="retro-subtitle">Karen returns!</h2>
           </div>
 
           <div className="bottom-nav">
@@ -59,9 +73,10 @@ export const Menu: FC<MenuProps> = ({ setGameState }) => {
       )}
 
       {currentView === 'CREATE_ROOM' && (
-        <CreateRoom onCreateRoom={onCreateGame} onGoBack={() => setCurrentView('MAIN')} />
+        <CreateRoom onCreateRoom={onCreateRoom} onGoBack={() => setCurrentView('MAIN')} />
       )}
-      {currentView === 'CREATED_ROOM' && (
+      {currentView === 'ENTER_ROOM' && <JoinRoom onJoinRoom={onJoinRoom} />}
+      {currentView === 'ROOM_READY' && (
         <CreatedRoom
           currentplayers={roomData ? Object.keys(roomData.players).length : 0}
           roomCode={roomData?.code ?? ''}

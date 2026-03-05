@@ -63,7 +63,7 @@ export class RoomManager {
     const selectedMap = JSON.parse(JSON.stringify(AVAILABLE_MAPS[randomMapIndex]))
 
     // No RoomManager.ts, dentro do createRoom:
-    const availableBackgrounds = ['garden', 'grass', 'mud_terrain', 'desert', 'golden_tiles']
+    const availableBackgrounds = ['garden', 'grass', 'desert', 'golden_tiles']
     const randomBg = availableBackgrounds[Math.floor(Math.random() * availableBackgrounds.length)]
 
     const newRoom: RoomData = {

@@ -3,13 +3,66 @@
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: 100dvh;
   z-index: 100;
-  background-color: #1a1a1a; /* Pode ser substituído pela imagem do deserto */
+
+  /* Mantém o seu background da imagem cortada */
+  background-image: url('/assets/ui/menu_bg.png');
+  background-size: cover;
+  background-position: center;
+  background-color: #1a1a1a;
+
+  /* A Mágica da Centralização Total */
+  display: flex;
+  align-items: center; /* Centraliza no eixo X */
+  justify-content: center; /* Centraliza no eixo Y */
+
+  color: white;
+}
+
+/* O container que segura o Título e os Botões */
+.main-view-container {
   display: flex;
   flex-direction: column;
-  color: white;
-  font-family: 'Courier New', Courier, monospace; /* Substitua pela fonte retro do seu jogo */
+  align-items: center; /* Garante que título e botões fiquem alinhados ao centro */
+  width: 100%;
+  max-width: 800px;
+  padding: 20px;
+}
+
+.title-area {
+  text-align: center;
+  margin-bottom: 50px; /* Dá um respiro entre o título e as opções */
+}
+
+/* --- NAVEGAÇÃO E RESPONSIVIDADE --- */
+.bottom-nav {
+  display: flex;
+  /* MOBILE FIRST: Empilha os botões como uma lista */
+  flex-direction: column;
+  align-items: center;
+  gap: 15px; /* Espaço uniforme entre os botões */
+  width: 100%;
+}
+
+.bottom-nav button {
+  width: 100%;
+  max-width: 300px; /* Evita que o botão ocupe a tela toda no mobile */
+  /* (Mantenha aqui as suas configurações de fonte pixelada, cores e bordas) */
+}
+
+/* DESKTOP / TABLET LARGOS: Transforma em uma linha */
+@media (min-width: 768px) {
+  .bottom-nav {
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap; /* Se não couber numa linha só, ele quebra graciosamente */
+    gap: 20px;
+  }
+
+  .bottom-nav button {
+    width: auto; /* Tira o limite de largura para se ajustar ao texto */
+  }
 }
 
 /* --- ESTILOS DO LOBBY --- */
@@ -23,7 +76,7 @@
 }
 
 .retro-input {
-  background: white;
+  background: black;
   border: 2px solid #333;
   padding: 15px;
   font-size: 1.2rem;
@@ -38,7 +91,7 @@
   flex-direction: column;
   gap: 15px;
   margin: 20px 0;
-  color: #ffb700; /* Laranja/Amarelo do print */
+  color: white; /* Laranja/Amarelo do print */
   font-weight: bold;
   font-size: 1.4rem;
 }
@@ -53,7 +106,7 @@
 .selector button {
   background: none;
   border: none;
-  color: #ffb700;
+  color: white;
   font-size: 1.5rem;
   cursor: pointer;
   font-family: inherit;
@@ -91,4 +144,61 @@
   font-family: inherit;
   font-size: 1.2rem;
   cursor: pointer;
+}
+
+/* --- TÍTULO DO JOGO --- */
+.title-area {
+  text-align: center;
+  margin-top: 10%;
+  margin-bottom: 40px;
+}
+
+.retro-title {
+  font-family: 'Bayoc', sans-serif;
+  font-size: 3.5rem;
+  color: white;
+
+  /* Cria aquela borda preta grossa do jogo original */
+  -webkit-text-stroke: 0.01px black;
+  text-shadow: 4px 4px 0px rgba(0, 0, 0, 0.8);
+
+  margin: 0;
+  line-height: 1.1;
+}
+
+.retro-subtitle {
+  font-family: 'Bayoc', sans-serif;
+  font-size: 2.2rem;
+  color: white;
+  -webkit-text-stroke: 0.01px black;
+  text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.8);
+  margin-top: 5px;
+}
+
+/* --- BOTÕES E UI --- */
+.bottom-nav button,
+.retro-input,
+.selector button,
+.action-btn {
+  font-family: 'VT323', monospace; /* A NOVA FONTE PIXELADA DA UI */
+  font-size: 1.8rem;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Opcional: Dando uma carinha mais "botão" pro menu principal */
+.bottom-nav button {
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid #fff;
+  padding: 10px 20px;
+  margin: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bottom-nav button:hover {
+  background: white;
+  color: black;
+  transform: scale(1.05);
 }

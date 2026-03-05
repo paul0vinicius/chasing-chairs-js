@@ -1,7 +1,7 @@
 import { FC, useState } from 'react'
 
 interface JoinRoomProps {
-  onJoinRoom: () => void
+  onJoinRoom: (playerName: string, roomCode: string) => void
 }
 
 export const JoinRoom: FC<JoinRoomProps> = ({ onJoinRoom }) => {
@@ -24,7 +24,7 @@ export const JoinRoom: FC<JoinRoomProps> = ({ onJoinRoom }) => {
         onChange={(e) => setRoomCode(e.target.value)}
         className="retro-input"
       />
-      <button className="action-btn join-btn" onClick={onJoinRoom}>
+      <button className="action-btn join-btn" onClick={() => onJoinRoom(playerName, roomCode)}>
         [ JOIN ROOM ]
       </button>
     </div>

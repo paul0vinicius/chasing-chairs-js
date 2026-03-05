@@ -17,58 +17,65 @@ export class ScoreboardManager {
     this.scene = scene
     this.localPlayerId = localPlayerId
 
-    // Cria um container ancorado no canto superior esquerdo
-    this.container = this.scene.add.container(10, 10)
+    // 1. Captura as Safe Areas do navegador (ou usa 0 como fallback)
+    // Se você seguiu o passo anterior de salvar no root, lemos daqui:
+    const style = window.getComputedStyle(document.documentElement)
+    const safeLeft = parseInt(style.getPropertyValue('--fixed-safe-area-left')) || 0
+    const safeTop = parseInt(style.getPropertyValue('--fixed-safe-area-top')) || 0
 
-    // O scrollFactor(0) garante que o placar não se mova se a câmera andar
+    // 2. Posiciona o container somando a margem de segurança (10px + notch)
+    const startX = 10 + safeLeft
+    const startY = 10 + safeTop
+
+    this.container = this.scene.add.container(startX, startY)
     this.container.setScrollFactor(0)
-    this.container.setDepth(2000) // Fica acima de tudo no jogo
+    this.container.setDepth(2000)
 
-    // Cria o fundo escuro (será redimensionado dinamicamente depois)
-    this.background = this.scene.add.rectangle(0, 0, 150, 50, 0x000000, 0.6).setOrigin(0)
+    // 3. Fundo estilizado (Preto com borda branca simulada)
+    this.background = this.scene.add
+      .rectangle(0, 0, 180, 50, 0x000000, 0.8)
+      .setOrigin(0)
+      .setStrokeStyle(2, 0xffffff) // Borda branca fina
+
     this.container.add(this.background)
 
-    // Título do Placar
-    const title = this.scene.add.text(10, 10, '🏆 SCOREBOARD', {
-      fontSize: '16px',
-      fontStyle: 'bold',
-      color: '#f1c40f',
+    // 4. Título padronizado (Branco, sem amarelo)
+    const title = this.scene.add.text(10, 10, 'SCOREBOARD', {
+      fontFamily: 'VT323', // Usando a mesma fonte do Menu
+      fontSize: '20px',
+      color: '#ffffff',
     })
     this.container.add(title)
   }
 
-  // Método principal que a Scene vai chamar sempre que alguém pontuar ou entrar
   public updateScoreboard(playersData: ScoreData[]) {
-    // 1. Limpa os textos antigos (exceto o título e fundo)
     this.textObjects.forEach((text) => text.destroy())
     this.textObjects = []
 
-    // 2. Ordena os jogadores do maior para o menor placar
     const sortedPlayers = [...playersData].sort((a, b) => b.score - a.score)
 
-    let currentY = 35 // Posição Y inicial abaixo do título
+    let currentY = 40
 
-    // 3. Desenha cada jogador na lista
     sortedPlayers.forEach((player, index) => {
       const isMe = player.id === this.localPlayerId
 
-      // Destaque visual: Amarelo para você, Branco para os outros
-      const color = isMe ? '#f1c40f' : '#ffffff'
-      const prefix = isMe ? '(You) ' : ''
-      const textString = `${index + 1}. ${prefix}${player.name}: ${player.score}`
+      // Tudo branco, mas com um traço para o local player (ou negrito)
+      const textString = `${index + 1}. ${isMe ? '> ' : ''}${player.name}: ${player.score}`
 
       const textObj = this.scene.add.text(10, currentY, textString, {
-        fontSize: '14px',
-        color: color,
+        fontFamily: 'VT323',
+        fontSize: '18px',
+        color: '#ffffff',
       })
+
+      if (isMe) textObj.setStyle({ fontStyle: 'bold' })
 
       this.container.add(textObj)
       this.textObjects.push(textObj)
 
-      currentY += 20 // Desce 20px para a próxima linha
+      currentY += 22
     })
 
-    // 4. Ajusta o tamanho do fundo dinamicamente para caber todo mundo
     this.background.setSize(180, currentY + 10)
   }
 }

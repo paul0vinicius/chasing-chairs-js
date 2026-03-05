@@ -58,7 +58,7 @@ export const Menu: FC<MenuProps> = ({ setGameState }) => {
   }
 
   return (
-    <div className="bg-menu bg-cover bg-center flex flex-col items-center justify-center w-full h-full relative">
+    <div className="bg-menu bg-cover bg-center flex flex-col items-center justify-center w-full h-full relative px-safe-left px-safe-right pt-safe-top pb-safe-bottom">
       {currentView === 'MAIN' && (
         <div className="flex flex-col items-center animate-fade-in">
           <div className="text-center mb-16">

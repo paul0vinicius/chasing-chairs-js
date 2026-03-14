@@ -1,4 +1,4 @@
-import { Player } from '@chasing-chairs/shared'
+import { AnimState, Player } from '@chasing-chairs/shared'
 import { Chair } from '@chasing-chairs/shared/chair.types'
 
 export const INITIAL_STATE_PLAYER: Omit<Player, 'id' | 'name'> = {
@@ -7,6 +7,7 @@ export const INITIAL_STATE_PLAYER: Omit<Player, 'id' | 'name'> = {
   speed: 1,
   score: 0,
   isReadyToPlayAgain: false,
+  currentAnim: AnimState.IDLE,
 }
 
 export const INITIAL_STATE_CHAIR: Chair = {

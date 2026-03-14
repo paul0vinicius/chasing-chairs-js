@@ -8,7 +8,6 @@ import {
   AnimState,
 } from '@chasing-chairs/shared'
 import { socket } from './socket'
-import { calculateNextPos } from '../utils/gridUtils'
 import {
   SocketHandler,
   UIManager,
@@ -126,16 +125,23 @@ export class MainScene extends Scene {
       this.uiManager.showBanner('A MÚSICA VAI COMEÇAR!')
     })
 
-    // No MainScene.ts
-
     this.events.on('net:s', (payload: MovePayload[]) => {
       payload.forEach((playerData) => {
         const { id, x, y, dir, anim } = PlayerMapper.deserializeMove(playerData)
 
-        // 1. Ignora o jogador local (nós já temos predição local no update)
+        // No MainScene.ts -> setupNetworkEvents -> net:s
         if (id === this.socketHandler.id) {
+          const isMovingLocally = this.gridEngine.isMoving(id)
           const myPos = this.gridEngine.getPosition(id)
-          if (Phaser.Math.Distance.Between(myPos.x, myPos.y, x, y) > 2) {
+          const dist = Phaser.Math.Distance.Between(myPos.x, myPos.y, x, y)
+
+          // SÓ corrigimos o jogador local se:
+          // 1. Ele estiver parado (o servidor é a autoridade final do "repouso")
+          // 2. A distância for realmente absurda (> 3 tiles), indicando desync total
+          if (!isMovingLocally && dist > 1) {
+            this.gridEngine.setPosition(id, { x, y })
+          } else if (dist > 3) {
+            console.warn('[Sync] Reconciliação crítica forçada')
             this.gridEngine.setPosition(id, { x, y })
           }
           return
@@ -247,11 +253,12 @@ export class MainScene extends Scene {
     this.gridEngine.movementStarted().subscribe(({ charId, direction }) => {
       if (charId === this.socketHandler.id) {
         const currentPos = this.gridEngine.getPosition(charId)
-        const nextPos = calculateNextPos(currentPos, direction)
 
-        // Avisa o servidor: "Estou andando de fato"
-        this.socketHandler.sendMove(this.currentRoom.code, direction, nextPos)
-        this.lastDirectionSent = direction
+        // Opcional: só envia se realmente mudou algo
+        if (direction !== this.lastDirectionSent) {
+          this.socketHandler.sendMove(this.currentRoom.code, direction, currentPos)
+          this.lastDirectionSent = direction
+        }
       }
     })
 
@@ -354,10 +361,19 @@ export class MainScene extends Scene {
       newDirection = Direction.DOWN
 
     if (newDirection !== Direction.NONE) {
-      this.gridEngine.move(myId, newDirection)
+      // SÓ chama o move se o personagem já não estiver se movendo naquela direção
+      // Isso mantém o fluxo do GridEngine muito mais limpo
+      if (
+        this.gridEngine.getFacingDirection(myId) !== newDirection ||
+        !this.gridEngine.isMoving(myId)
+      ) {
+        this.gridEngine.move(myId, newDirection)
+      }
     } else {
-      // Importante: Se não há tecla, paramos o movimento localmente
-      this.gridEngine.stopMovement(myId)
+      // Só chama o stop se ele realmente estiver em movimento
+      if (this.gridEngine.isMoving(myId)) {
+        this.gridEngine.stopMovement(myId)
+      }
     }
   }
 }

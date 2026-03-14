@@ -1,6 +1,12 @@
 import { Scene } from 'phaser'
 import { GridEngine, Direction } from 'grid-engine'
-import { DirectionIdToName, MovePayload, PlayerMapper, RoomData } from '@chasing-chairs/shared'
+import {
+  DirectionIdToName,
+  MovePayload,
+  PlayerMapper,
+  RoomData,
+  AnimState,
+} from '@chasing-chairs/shared'
 import { socket } from './socket'
 import { calculateNextPos } from '../utils/gridUtils'
 import {
@@ -120,36 +126,54 @@ export class MainScene extends Scene {
       this.uiManager.showBanner('A MÚSICA VAI COMEÇAR!')
     })
 
-    this.events.on('net:playerMoved', (data: MovePayload) => {
-      // 1. Deserializa o array otimizado
-      const { id, x, y, dir } = PlayerMapper.deserializeMove(data)
+    // No MainScene.ts
 
-      if (id === this.socketHandler.id) return // Ignora eco local
+    this.events.on('net:s', (payload: MovePayload[]) => {
+      payload.forEach((playerData) => {
+        const { id, x, y, dir, anim } = PlayerMapper.deserializeMove(playerData)
 
-      if (this.gridEngine.hasCharacter(id)) {
-        const directionName = DirectionIdToName[dir] as Direction
-        const serverPos = { x, y }
+        // 1. Ignora o jogador local (nós já temos predição local no update)
+        if (id === this.socketHandler.id) return
 
-        // 2. Movimenta o personagem na grade
-        this.gridEngine.move(id, directionName)
-
-        // 3. Sincronização Inteligente:
-        // Em vez de esperar parar, verificamos a distância atual.
-        // Se ele estiver a mais de 1 tile de distância do que o servidor diz, corrigimos.
-        const currentPos = this.gridEngine.getPosition(id)
-        const distance = Phaser.Math.Distance.Between(
-          currentPos.x,
-          currentPos.y,
-          serverPos.x,
-          serverPos.y
-        )
-
-        if (distance > 1) {
-          // Correção suave: Se for uma distância pequena, o GridEngine suaviza.
-          // Se for grande (lag pesado), ele teleporta.
-          this.gridEngine.setPosition(id, serverPos)
+        // 2. Garante que o jogador remoto existe na cena
+        if (!this.players.has(id)) {
+          // Se por acaso um novo player entrou e não pegamos o evento de join
+          this.addRemotePlayer(this.currentRoom.players[id])
+          return
         }
-      }
+
+        const remotePlayer = this.players.get(id)!
+
+        if (this.gridEngine.hasCharacter(id)) {
+          const directionName = DirectionIdToName[dir] as Direction
+          const serverPos = { x, y }
+
+          // 3. MOVIMENTO SUAVE (Interpolação do GridEngine)
+          // Se o servidor diz que ele está se mexendo, mandamos o GridEngine mover.
+          // O GridEngine cuidará de deslizar o sprite entre os tiles.
+          if (directionName !== Direction.NONE) {
+            this.gridEngine.move(id, directionName)
+          }
+
+          // 4. RECONCILIAÇÃO DE ESTADO (Ajuste de "Ghosting")
+          const currentPos = this.gridEngine.getPosition(id)
+          const dist = Phaser.Math.Distance.Between(
+            currentPos.x,
+            currentPos.y,
+            serverPos.x,
+            serverPos.y
+          )
+
+          // Se a diferença for pequena (ex: < 0.5 tile), ignoramos e deixamos o GridEngine terminar a animação.
+          // Se a diferença for grande (> 1.2 tiles), houve lag pesado, então teleportamos para corrigir.
+          if (dist > 1.2) {
+            this.gridEngine.setPosition(id, serverPos)
+          }
+
+          // 5. ATUALIZAÇÃO DE ANIMAÇÕES (Opcional, baseado no AnimState)
+          this.handleRemoteAnimation(remotePlayer, anim as AnimState)
+        }
+      })
     })
 
     this.events.on('net:chairTaken', (id: string) => this.handleChairTaken(id))
@@ -198,6 +222,19 @@ export class MainScene extends Scene {
 
       this.refreshScoreboard(players)
     })
+  }
+
+  private handleRemoteAnimation(player: Player, state: AnimState) {
+    switch (state) {
+      case AnimState.SIT:
+        player.sit()
+        break
+      case AnimState.IDLE:
+        // Se não está sentado nem andando, volta pro idle/dance dependendo da música
+        if (this.currentRoom.isMusicPlaying) player.dance()
+        else player.walk()
+        break
+    }
   }
 
   private setupGameEvents() {

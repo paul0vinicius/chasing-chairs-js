@@ -10,12 +10,40 @@ import {
 import { RoomManager } from '../room/RoomManager'
 
 export class SocketHandler {
+  private readonly TICK_RATE = 50 // 20Hz (um pacote a cada 50ms)
+
   constructor(
     private io: Server<ClientToServerEvents, ServerToClientEvents>,
     private roomManager: RoomManager
-  ) {}
+  ) {
+    this.startHeartbeat() // Inicia o metrônomo do servidor
+  }
 
   private static roomTimeouts: Map<string, NodeJS.Timeout> = new Map()
+
+  private startHeartbeat() {
+    setInterval(() => {
+      this.roomManager.getAllRooms().forEach((room) => {
+        // Só processamos salas que estão ativas e em jogo
+        if (room.status === 'playing') {
+          // 1. Criamos o Payload Otimizado (Array de Arrays)
+          const payload = Object.values(room.players).map((p) =>
+            PlayerMapper.serializeMove(
+              p.id,
+              p.position.x,
+              p.position.y,
+              p.direction || 0,
+              p.currentAnim || 0
+            )
+          )
+
+          // 2. Broadcast para a sala específica usando o evento curto 's'
+          // Certifique-se de que 's' está definido no seu ServerToClientEvents no shared
+          this.io.to(room.code).emit('s', payload)
+        }
+      })
+    }, this.TICK_RATE)
+  }
 
   handleConnection(socket: Socket<ClientToServerEvents, ServerToClientEvents>) {
     let currentRoomCode: string | null = null
@@ -56,22 +84,14 @@ export class SocketHandler {
       const room = this.roomManager.getRoom(roomCode)
       if (!room || !room.players[socket.id]) return
 
-      // 1. Atualiza o estado no servidor (mantemos o objeto para lógica de servidor)
-      room.players[socket.id].position = newPos
+      const player = room.players[socket.id]
 
-      // 2. Prepara o Payload Otimizado
-      // Nota: Aqui assumimos que se o player está movendo, o estado é WALK (1)
-      const dirId = DirectionMap[direction] ?? 0
-      const optimizedPayload = PlayerMapper.serializeMove(
-        socket.id,
-        newPos.x,
-        newPos.y,
-        dirId,
-        AnimState.WALK
-      )
+      // Apenas salvamos o novo estado
+      player.position = newPos
+      player.direction = DirectionMap[direction] ?? 0
 
-      // 3. Broadcast do Array
-      socket.to(roomCode).emit('playerMoved', optimizedPayload)
+      // Se ele moveu, assumimos WALK, se a direção for NONE, IDLE
+      player.currentAnim = direction === 'none' ? AnimState.IDLE : AnimState.WALK
     })
 
     socket.on('playerSat', (roomCode) => {

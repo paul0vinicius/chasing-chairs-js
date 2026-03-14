@@ -31,6 +31,7 @@ export class SocketHandler {
     this.socket.on('gameRestarted', (players) =>
       this.scene.events.emit('net:gameRestarted', players)
     )
+    this.socket.on('s', (data) => this.scene.events.emit('net:s', data))
   }
 
   // Métodos de saída (Ações que o jogador toma)

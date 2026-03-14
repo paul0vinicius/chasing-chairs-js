@@ -119,6 +119,10 @@ export class RoomManager {
     return this.rooms.get(code)
   }
 
+  getAllRooms() {
+    return this.rooms
+  }
+
   deleteRoom(code: string): boolean {
     console.log(`Room ${code} deleted (empty)`)
     return this.rooms.delete(code)

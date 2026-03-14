@@ -10,6 +10,7 @@ export const PlayerSchema = z.object({
   score: z.number(),
   isReadyToPlayAgain: z.boolean(),
   currentAnim: z.number(),
+  direction: z.number(),
 })
 
 export type Player = z.infer<typeof PlayerSchema>

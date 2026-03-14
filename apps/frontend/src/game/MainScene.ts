@@ -1,6 +1,6 @@
 import { Scene } from 'phaser'
 import { GridEngine, Direction } from 'grid-engine'
-import { RoomData } from '@chasing-chairs/shared'
+import { DirectionIdToName, MovePayload, PlayerMapper, RoomData } from '@chasing-chairs/shared'
 import { socket } from './socket'
 import { calculateNextPos } from '../utils/gridUtils'
 import {
@@ -26,6 +26,8 @@ export class MainScene extends Scene {
   private chair: Chair | null = null
 
   private currentRoom!: RoomData
+
+  private lastDirectionSent: Direction = Direction.NONE
 
   constructor() {
     super('MainScene')
@@ -118,28 +120,35 @@ export class MainScene extends Scene {
       this.uiManager.showBanner('A MÚSICA VAI COMEÇAR!')
     })
 
-    this.events.on('net:playerMoved', ({ id, direction, position }: any) => {
+    this.events.on('net:playerMoved', (data: MovePayload) => {
+      // 1. Deserializa o array otimizado
+      const { id, x, y, dir } = PlayerMapper.deserializeMove(data)
+
       if (id === this.socketHandler.id) return // Ignora eco local
 
       if (this.gridEngine.hasCharacter(id)) {
-        // 1. Faz o personagem remoto começar a andar na tela
-        this.gridEngine.move(id, direction as Direction)
+        const directionName = DirectionIdToName[dir] as Direction
+        const serverPos = { x, y }
 
-        // 2. Assim que ele parar de andar, conferimos se ele parou no lugar certo
-        const sub = this.gridEngine.movementStopped().subscribe(({ charId }) => {
-          if (charId === id && position) {
-            const currentPos = this.gridEngine.getPosition(id)
+        // 2. Movimenta o personagem na grade
+        this.gridEngine.move(id, directionName)
 
-            // Se o cliente dessincronizou do servidor, forçamos a correção invisível
-            if (currentPos.x !== position.x || currentPos.y !== position.y) {
-              console.warn(`[Sync] Corrigindo posição do jogador ${id}`)
-              this.gridEngine.setPosition(id, position)
-            }
+        // 3. Sincronização Inteligente:
+        // Em vez de esperar parar, verificamos a distância atual.
+        // Se ele estiver a mais de 1 tile de distância do que o servidor diz, corrigimos.
+        const currentPos = this.gridEngine.getPosition(id)
+        const distance = Phaser.Math.Distance.Between(
+          currentPos.x,
+          currentPos.y,
+          serverPos.x,
+          serverPos.y
+        )
 
-            // MUITO IMPORTANTE: Limpamos a inscrição para não estourar a memória (Memory Leak)
-            sub.unsubscribe()
-          }
-        })
+        if (distance > 1) {
+          // Correção suave: Se for uma distância pequena, o GridEngine suaviza.
+          // Se for grande (lag pesado), ele teleporta.
+          this.gridEngine.setPosition(id, serverPos)
+        }
       }
     })
 
@@ -203,14 +212,6 @@ export class MainScene extends Scene {
       this.handleChairSpawn(pos)
       // Checa imediatamente se ela nasceu embaixo de mim!
       this.checkChairCollision()
-    })
-
-    this.gridEngine.movementStarted().subscribe(({ charId, direction }) => {
-      if (charId === this.socketHandler.id) {
-        const currentPos = this.gridEngine.getPosition(charId)
-        const nextPos = calculateNextPos(currentPos, direction)
-        this.socketHandler.sendMove(this.currentRoom.code, direction, nextPos)
-      }
     })
   }
 
@@ -277,17 +278,33 @@ export class MainScene extends Scene {
   }
 
   update() {
-    if (!this.socketHandler?.id || !this.players.get(this.socketHandler.id)?.canMove) return
+    const myId = this.socketHandler.id
+    if (!myId || !this.players.get(myId)?.canMove) return
 
-    // CORREÇÃO DO BUG: JustDown garante que o evento dispare apenas 1 vez por clique
-    // O jogador precisa soltar a tecla e apertar de novo para andar mais um bloco.
-    if (Phaser.Input.Keyboard.JustDown(this.cursors.left))
-      this.gridEngine.move(this.socketHandler.id, Direction.LEFT)
-    else if (Phaser.Input.Keyboard.JustDown(this.cursors.right))
-      this.gridEngine.move(this.socketHandler.id, Direction.RIGHT)
-    else if (Phaser.Input.Keyboard.JustDown(this.cursors.up))
-      this.gridEngine.move(this.socketHandler.id, Direction.UP)
-    else if (Phaser.Input.Keyboard.JustDown(this.cursors.down))
-      this.gridEngine.move(this.socketHandler.id, Direction.DOWN)
+    let newDirection = Direction.NONE
+
+    // Detecta qual tecla está pressionada
+    if (this.cursors.left.isDown) newDirection = Direction.LEFT
+    else if (this.cursors.right.isDown) newDirection = Direction.RIGHT
+    else if (this.cursors.up.isDown) newDirection = Direction.UP
+    else if (this.cursors.down.isDown) newDirection = Direction.DOWN
+
+    // 1. Comando local para o GridEngine (Movimento Fluido)
+    if (newDirection !== Direction.NONE) {
+      this.gridEngine.move(myId, newDirection)
+    }
+
+    // 2. Lógica de Rede: Só envia se a intenção MUDOU
+    // Se o jogador soltar a tecla, enviamos NONE para o servidor saber que ele parou.
+    if (newDirection !== this.lastDirectionSent) {
+      const currentPos = this.gridEngine.getPosition(myId)
+
+      // Calculamos para onde ele vai se mover (ajuda na predição do servidor)
+      const nextPos =
+        newDirection !== Direction.NONE ? calculateNextPos(currentPos, newDirection) : currentPos
+
+      this.socketHandler.sendMove(this.currentRoom.code, newDirection, nextPos)
+      this.lastDirectionSent = newDirection
+    }
   }
 }

@@ -1,5 +1,12 @@
 import { Server, Socket } from 'socket.io'
-import { ClientToServerEvents, RoomData, ServerToClientEvents } from '@chasing-chairs/shared'
+import {
+  ClientToServerEvents,
+  RoomData,
+  ServerToClientEvents,
+  DirectionMap,
+  PlayerMapper,
+  AnimState,
+} from '@chasing-chairs/shared'
 import { RoomManager } from '../room/RoomManager'
 
 export class SocketHandler {
@@ -49,13 +56,22 @@ export class SocketHandler {
       const room = this.roomManager.getRoom(roomCode)
       if (!room || !room.players[socket.id]) return
 
+      // 1. Atualiza o estado no servidor (mantemos o objeto para lógica de servidor)
       room.players[socket.id].position = newPos
 
-      socket.to(roomCode).emit('playerMoved', {
-        id: socket.id,
-        direction,
-        position: newPos,
-      })
+      // 2. Prepara o Payload Otimizado
+      // Nota: Aqui assumimos que se o player está movendo, o estado é WALK (1)
+      const dirId = DirectionMap[direction] ?? 0
+      const optimizedPayload = PlayerMapper.serializeMove(
+        socket.id,
+        newPos.x,
+        newPos.y,
+        dirId,
+        AnimState.WALK
+      )
+
+      // 3. Broadcast do Array
+      socket.to(roomCode).emit('playerMoved', optimizedPayload)
     })
 
     socket.on('playerSat', (roomCode) => {
@@ -200,8 +216,6 @@ export class SocketHandler {
       currentRoom.chair.position = this.roomManager.getRandomSpawnPosition(currentRoom)
       currentRoom.chair.isActive = true
 
-      // 1. DISPARA OS DOIS EVENTOS JUNTOS:
-      // Isso garante que a música pare NO MOMENTO exato em que a cadeira surge.
       this.io.to(roomCode).emit('musicStopped')
       this.roomManager.getRoom(roomCode).isMusicPlaying = false
       this.io.to(roomCode).emit('chairSpawned', currentRoom.chair.position)
@@ -221,7 +235,6 @@ export class SocketHandler {
       'louder please rose gray',
       'cosmica grag queen',
       'stateside zara larson pink panthress',
-      'bibi babydoll',
       'lady gaga mayhem',
       'duda beat tara e tal',
       'carnaval eletronico daniela mercury',

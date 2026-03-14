@@ -1,12 +1,7 @@
-import { Direction, Position } from './position.types'
+import { Position } from './position.types'
 import { Player } from './player.types'
 import { RoomData } from './room.types'
-
-interface PlayerMovedProps {
-  id: string
-  direction: Direction
-  position: Position
-}
+import { MovePayload } from '@chasing-chairs/shared'
 
 interface MusicStartedProps {
   url: string
@@ -21,7 +16,7 @@ export interface ServerToClientEvents {
   error: (message: string) => void
   playerJoined: (player: Player) => void
   updatedPlayers: (players: Record<string, Player>) => void
-  playerMoved: (playerMovedProps: PlayerMovedProps) => void
+  playerMoved: (playerMovedProps: MovePayload) => void
   playerDisconnected: (id: string) => void
   gameStarted: (serverPlayers: any) => void
   chairSpawned: (position: Position) => void

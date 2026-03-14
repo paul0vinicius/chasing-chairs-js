@@ -133,7 +133,13 @@ export class MainScene extends Scene {
         const { id, x, y, dir, anim } = PlayerMapper.deserializeMove(playerData)
 
         // 1. Ignora o jogador local (nós já temos predição local no update)
-        if (id === this.socketHandler.id) return
+        if (id === this.socketHandler.id) {
+          const myPos = this.gridEngine.getPosition(id)
+          if (Phaser.Math.Distance.Between(myPos.x, myPos.y, x, y) > 2) {
+            this.gridEngine.setPosition(id, { x, y })
+          }
+          return
+        }
 
         // 2. Garante que o jogador remoto existe na cena
         if (!this.players.has(id)) {

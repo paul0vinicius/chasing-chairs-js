@@ -85,13 +85,11 @@ export class SocketHandler {
       if (!room || !room.players[socket.id]) return
 
       const player = room.players[socket.id]
-
-      // Apenas salvamos o novo estado
       player.position = newPos
       player.direction = DirectionMap[direction] ?? 0
 
-      // Se ele moveu, assumimos WALK, se a direção for NONE, IDLE
-      player.currentAnim = direction === 'none' ? AnimState.IDLE : AnimState.WALK
+      // Se a direção for NONE (0), o estado é IDLE, senão é WALK
+      player.currentAnim = player.direction === 0 ? AnimState.IDLE : AnimState.WALK
     })
 
     socket.on('playerSat', (roomCode) => {

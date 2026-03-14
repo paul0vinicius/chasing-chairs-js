@@ -238,16 +238,31 @@ export class MainScene extends Scene {
   }
 
   private setupGameEvents() {
-    this.gridEngine.positionChangeFinished().subscribe(({ charId }) => {
+    this.gridEngine.movementStarted().subscribe(({ charId, direction }) => {
       if (charId === this.socketHandler.id) {
-        this.checkChairCollision() // Checa a cada tile que ele "pisa"
+        const currentPos = this.gridEngine.getPosition(charId)
+        const nextPos = calculateNextPos(currentPos, direction)
+
+        // Avisa o servidor: "Estou andando de fato"
+        this.socketHandler.sendMove(this.currentRoom.code, direction, nextPos)
+        this.lastDirectionSent = direction
       }
     })
 
-    this.gridEngine.positionChangeFinished().subscribe(({ charId }) => {
+    // AVISA O SERVIDOR QUANDO PARAR
+    this.gridEngine.movementStopped().subscribe(({ charId }) => {
       if (charId === this.socketHandler.id) {
-        this.checkChairCollision()
+        const currentPos = this.gridEngine.getPosition(charId)
+
+        // Enviamos NONE para o servidor saber que o boneco parou no tile
+        this.socketHandler.sendMove(this.currentRoom.code, Direction.NONE, currentPos)
+        this.lastDirectionSent = Direction.NONE
       }
+    })
+
+    // Colisão da cadeira (mantenha como positionChangeFinished para ser rápido)
+    this.gridEngine.positionChangeFinished().subscribe(({ charId }) => {
+      if (charId === this.socketHandler.id) this.checkChairCollision()
     })
 
     this.events.on('net:chairSpawned', (pos: { x: number; y: number }) => {
@@ -323,43 +338,20 @@ export class MainScene extends Scene {
     if (!myId || !this.players.get(myId)?.canMove) return
 
     let newDirection = Direction.NONE
-
-    // 1. Prioridade para o Teclado
-    if (this.cursors.left.isDown) newDirection = Direction.LEFT
-    else if (this.cursors.right.isDown) newDirection = Direction.RIGHT
-    else if (this.cursors.up.isDown) newDirection = Direction.UP
-    else if (this.cursors.down.isDown) newDirection = Direction.DOWN
-
-    // 2. Se não houver teclado, olha para o Mobile (D-Pad)
-    if (newDirection === Direction.NONE) {
-      newDirection = this.uiManager.activeDirection
-    }
+    if (this.cursors.left.isDown || this.uiManager.activeDirection === Direction.LEFT)
+      newDirection = Direction.LEFT
+    else if (this.cursors.right.isDown || this.uiManager.activeDirection === Direction.RIGHT)
+      newDirection = Direction.RIGHT
+    else if (this.cursors.up.isDown || this.uiManager.activeDirection === Direction.UP)
+      newDirection = Direction.UP
+    else if (this.cursors.down.isDown || this.uiManager.activeDirection === Direction.DOWN)
+      newDirection = Direction.DOWN
 
     if (newDirection !== Direction.NONE) {
-      // 1. Tenta mover
       this.gridEngine.move(myId, newDirection)
-
-      // 2. Só envia para a rede se a intenção mudou E o personagem realmente está se movendo
-      // (Isso evita enviar "Walking" se ele estiver travado na parede)
-      const isActuallyMoving = this.gridEngine.isMoving(myId)
-
-      if (isActuallyMoving && newDirection !== this.lastDirectionSent) {
-        const currentPos = this.gridEngine.getPosition(myId)
-        const nextPos = calculateNextPos(currentPos, newDirection)
-
-        this.socketHandler.sendMove(this.currentRoom.code, newDirection, nextPos)
-        this.lastDirectionSent = newDirection
-      }
-    }
-
-    // 4. Lógica de Rede (Throttle de intenção)
-    if (newDirection !== this.lastDirectionSent) {
-      const currentPos = this.gridEngine.getPosition(myId)
-      const nextPos =
-        newDirection !== Direction.NONE ? calculateNextPos(currentPos, newDirection) : currentPos
-
-      this.socketHandler.sendMove(this.currentRoom.code, newDirection, nextPos)
-      this.lastDirectionSent = newDirection
+    } else {
+      // Importante: Se não há tecla, paramos o movimento localmente
+      this.gridEngine.stopMovement(myId)
     }
   }
 }

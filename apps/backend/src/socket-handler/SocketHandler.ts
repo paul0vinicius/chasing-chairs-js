@@ -24,22 +24,22 @@ export class SocketHandler {
   private startHeartbeat() {
     setInterval(() => {
       this.roomManager.getAllRooms().forEach((room) => {
-        // Só processamos salas que estão ativas e em jogo
         if (room.status === 'playing') {
-          // 1. Criamos o Payload Otimizado (Array de Arrays)
-          const payload = Object.values(room.players).map((p) =>
-            PlayerMapper.serializeMove(
+          const payload = Object.values(room.players).map((p) => {
+            let stateToSend = p.currentAnim
+            if (room.isMusicPlaying && p.currentAnim === AnimState.IDLE) {
+              stateToSend = AnimState.DANCE
+            }
+
+            return PlayerMapper.serializeMove(
               p.id,
               p.position.x,
               p.position.y,
-              p.direction || 0,
-              p.currentAnim || 0
+              p.direction,
+              stateToSend
             )
-          )
-
-          // 2. Broadcast para a sala específica usando o evento curto 's'
-          // Certifique-se de que 's' está definido no seu ServerToClientEvents no shared
-          this.io.to(room.code).emit('s', payload)
+          })
+          this.io.to(room.code).emit('s' as any, payload)
         }
       })
     }, this.TICK_RATE)

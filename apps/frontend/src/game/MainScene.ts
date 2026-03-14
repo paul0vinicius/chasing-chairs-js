@@ -238,16 +238,20 @@ export class MainScene extends Scene {
   }
 
   private setupGameEvents() {
-    this.gridEngine.movementStopped().subscribe(({ charId }) => {
+    this.gridEngine.positionChangeFinished().subscribe(({ charId }) => {
+      if (charId === this.socketHandler.id) {
+        this.checkChairCollision() // Checa a cada tile que ele "pisa"
+      }
+    })
+
+    this.gridEngine.positionChangeFinished().subscribe(({ charId }) => {
       if (charId === this.socketHandler.id) {
         this.checkChairCollision()
       }
     })
 
-    // Novo ouvinte: Quando a cadeira nasce
     this.events.on('net:chairSpawned', (pos: { x: number; y: number }) => {
       this.handleChairSpawn(pos)
-      // Checa imediatamente se ela nasceu embaixo de mim!
       this.checkChairCollision()
     })
   }
@@ -331,9 +335,21 @@ export class MainScene extends Scene {
       newDirection = this.uiManager.activeDirection
     }
 
-    // 3. Comando local para o GridEngine (Movimento Contínuo)
     if (newDirection !== Direction.NONE) {
+      // 1. Tenta mover
       this.gridEngine.move(myId, newDirection)
+
+      // 2. Só envia para a rede se a intenção mudou E o personagem realmente está se movendo
+      // (Isso evita enviar "Walking" se ele estiver travado na parede)
+      const isActuallyMoving = this.gridEngine.isMoving(myId)
+
+      if (isActuallyMoving && newDirection !== this.lastDirectionSent) {
+        const currentPos = this.gridEngine.getPosition(myId)
+        const nextPos = calculateNextPos(currentPos, newDirection)
+
+        this.socketHandler.sendMove(this.currentRoom.code, newDirection, nextPos)
+        this.lastDirectionSent = newDirection
+      }
     }
 
     // 4. Lógica de Rede (Throttle de intenção)

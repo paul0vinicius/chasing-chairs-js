@@ -1,25 +1,6 @@
 import { RoomData, RoomStatus } from '@chasing-chairs/shared'
 import { INITIAL_STATE_CHAIR, INITIAL_STATE_PLAYER } from './constants'
-
-// 1. Banco de Mapas do Backend
-const AVAILABLE_MAPS = [
-  // Mapa Original
-  [
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 1, 1, 0, 1, 0, 1],
-    [1, 0, 0, 0, 0, 1, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-  ],
-  // Mapa Alternativo (Corredores diferentes)
-  [
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 1, 0, 0, 1, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 1, 0, 1, 1, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-  ],
-]
+import { AVAILABLE_MAPS } from './maps'
 
 export class RoomManager {
   private rooms: Map<string, RoomData> = new Map()

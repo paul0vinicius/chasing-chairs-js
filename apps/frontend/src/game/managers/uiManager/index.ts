@@ -8,6 +8,7 @@ export class UIManager {
   private gridEngine: GridEngine
   private currentMusic: HTMLAudioElement | null = null
   private musicKey: string | null = null
+  public activeDirection: Direction = Direction.NONE
 
   constructor(scene: Scene, socketHandler: SocketHandler, gridEngine: GridEngine) {
     this.scene = scene
@@ -164,14 +165,18 @@ export class UIManager {
 
       btn.on('pointerdown', () => {
         btn.setFillStyle(0xffffff, 0.5)
-        const myId = this.socketHandler.id
-        if (myId && !this.gridEngine.isMoving(myId)) {
-          this.gridEngine.move(myId, btnConfig.dir)
-        }
+        this.activeDirection = btnConfig.dir
       })
 
-      btn.on('pointerup', () => btn.setFillStyle(0xffffff, 0.2))
-      btn.on('pointerout', () => btn.setFillStyle(0xffffff, 0.2))
+      const stopMovement = () => {
+        btn.setFillStyle(0xffffff, 0.2)
+        if (this.activeDirection === btnConfig.dir) {
+          this.activeDirection = Direction.NONE
+        }
+      }
+
+      btn.on('pointerup', stopMovement)
+      btn.on('pointerout', stopMovement)
     })
   }
 

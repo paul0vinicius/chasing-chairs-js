@@ -283,23 +283,25 @@ export class MainScene extends Scene {
 
     let newDirection = Direction.NONE
 
-    // Detecta qual tecla está pressionada
+    // 1. Prioridade para o Teclado
     if (this.cursors.left.isDown) newDirection = Direction.LEFT
     else if (this.cursors.right.isDown) newDirection = Direction.RIGHT
     else if (this.cursors.up.isDown) newDirection = Direction.UP
     else if (this.cursors.down.isDown) newDirection = Direction.DOWN
 
-    // 1. Comando local para o GridEngine (Movimento Fluido)
+    // 2. Se não houver teclado, olha para o Mobile (D-Pad)
+    if (newDirection === Direction.NONE) {
+      newDirection = this.uiManager.activeDirection
+    }
+
+    // 3. Comando local para o GridEngine (Movimento Contínuo)
     if (newDirection !== Direction.NONE) {
       this.gridEngine.move(myId, newDirection)
     }
 
-    // 2. Lógica de Rede: Só envia se a intenção MUDOU
-    // Se o jogador soltar a tecla, enviamos NONE para o servidor saber que ele parou.
+    // 4. Lógica de Rede (Throttle de intenção)
     if (newDirection !== this.lastDirectionSent) {
       const currentPos = this.gridEngine.getPosition(myId)
-
-      // Calculamos para onde ele vai se mover (ajuda na predição do servidor)
       const nextPos =
         newDirection !== Direction.NONE ? calculateNextPos(currentPos, newDirection) : currentPos
 

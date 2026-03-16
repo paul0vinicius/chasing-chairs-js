@@ -74,6 +74,20 @@ export class MainScene extends Scene {
     )
     this.players.set(myId, localPlayer)
 
+    if (myId && this.players.has(myId)) {
+      const localPlayer = this.players.get(myId)!
+
+      // Define os limites da câmera baseados no tamanho do mapa
+      const tileWidth = 32 // ou o tamanho que você definiu no Tiled/GridEngine
+      const mapWidthInPixels = this.currentRoom.mapData[0].length * tileWidth
+      const mapHeightInPixels = this.currentRoom.mapData.length * tileWidth
+
+      this.cameras.main.setBounds(0, 0, mapWidthInPixels, mapHeightInPixels)
+
+      // Suavização da câmera (lerp) para não cansar a vista no mobile
+      this.cameras.main.startFollow(localPlayer, true, 0.1, 0.1)
+    }
+
     // 3. Adiciona os jogadores remotos (que também já vêm com a posição correta)
     Object.values(this.currentRoom.players).forEach((p) => {
       if (p.id !== myId) this.addRemotePlayer(p)

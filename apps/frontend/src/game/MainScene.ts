@@ -326,7 +326,7 @@ export class MainScene extends Scene {
   }
 
   private addRemotePlayer(data: any) {
-    if (!this.sys || this.players.has(data.id)) return
+    if (!this.sys || this.players.has(data?.id)) return
 
     const remotePlayer = new Player(
       this,

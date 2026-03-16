@@ -35,7 +35,7 @@ export const JoinRoom: FC<JoinRoomProps> = ({ onGoBack, onJoinRoom }) => {
         </div>
 
         <div className="flex justify-center w-full mt-2">
-          <RetroButton className="!px-12" onClick={() => onJoinRoom(roomCode, playerName)}>
+          <RetroButton className="!px-12" onClick={() => onJoinRoom(playerName, roomCode)}>
             Entrar
           </RetroButton>
         </div>

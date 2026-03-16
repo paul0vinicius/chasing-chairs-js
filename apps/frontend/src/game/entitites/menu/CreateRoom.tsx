@@ -1,5 +1,9 @@
 import { FC, useState } from 'react'
 import { RetroInput, RetroButton, RetroSelector } from '../../../components'
+import { RotateOverlay } from './RotateOverlay'
+
+const MAX_PLAYERS = 4
+const ROUNDS = [1, 3, 5, 10]
 
 interface CreateRoomProps {
   onGoBack: () => void
@@ -9,43 +13,53 @@ interface CreateRoomProps {
 export const CreateRoom: FC<CreateRoomProps> = ({ onGoBack, onCreateRoom }) => {
   const [playerName, setPlayerName] = useState('')
   const [roomSize, setRoomSize] = useState(1)
-  const [rounds, setRounds] = useState(1)
+  const [roundsIndex, setRoundsIndex] = useState(0)
+
+  const rounds = ROUNDS[roundsIndex]
 
   return (
-    <div className="flex flex-col items-center gap-8 w-full h-full max-w-sm animate-fade-in justify-center px-4 relative animate-fade-in">
-      <RetroButton
-        className="absolute top-6 left-6 md:top-10 md:left-10 !text-lg md:!text-xl !py-1 !px-4"
-        onClick={onGoBack}
-      >
-        &lt; Voltar
-      </RetroButton>
+    <div className="flex flex-col items-center justify-center w-full h-full max-w-2xl mx-auto animate-fade-in relative px-safe-left pt-safe-top pb-safe-bottom">
+      <RotateOverlay />
 
-      <div className="flex flex-col items-center w-full max-w-md gap-8 mt-12 md:mt-0">
-        <RetroInput
-          placeholder="Your Name"
-          value={playerName}
-          onChange={(e: any) => setPlayerName(e.target.value)}
-        />
+      <div className="absolute top-2 left-2 z-10">
+        <RetroButton className="!text-[10px] md:!text-xs !py-1 !px-3 !min-w-0" onClick={onGoBack}>
+          &lt; Voltar
+        </RetroButton>
+      </div>
 
-        <div className="flex flex-col w-full gap-4">
+      <div className="flex flex-col w-full max-w-md gap-3 mt-4">
+        <div className="w-full">
+          <RetroInput
+            placeholder="Seu nome"
+            value={playerName}
+            onChange={(e: any) => setPlayerName(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-col w-full gap-1">
           <RetroSelector
-            label="Players"
+            label="Jogadores"
             value={roomSize}
-            onIncrement={() => setRoomSize((prev) => prev + 1)}
+            onIncrement={() => setRoomSize((prev) => Math.min(MAX_PLAYERS, prev + 1))}
             onDecrement={() => setRoomSize((prev) => Math.max(1, prev - 1))}
           />
 
           <RetroSelector
-            label="Rounds"
+            label="Rodadas"
             value={rounds}
-            onIncrement={() => setRounds((prev) => prev + 1)}
-            onDecrement={() => setRounds((prev) => Math.max(1, prev - 1))}
+            onIncrement={() =>
+              setRoundsIndex((prev) => (prev + 1 > ROUNDS.length - 1 ? prev : prev + 1))
+            }
+            onDecrement={() => setRoundsIndex((prev) => (prev - 1 < 0 ? prev : prev - 1))}
           />
         </div>
 
-        <div className="mt-4">
-          <RetroButton onClick={() => onCreateRoom(playerName, roomSize, rounds)}>
-            Create Room
+        <div className="flex justify-center w-full mt-2">
+          <RetroButton
+            className="!px-12"
+            onClick={() => onCreateRoom(playerName, roomSize, rounds)}
+          >
+            Criar sala
           </RetroButton>
         </div>
       </div>

@@ -1,38 +1,44 @@
 import { FC, useState } from 'react'
-import { RetroButton, RetroInput } from '../../../components'
+import { RetroInput, RetroButton } from '../../../components'
+import { RotateOverlay } from './RotateOverlay'
 
 interface JoinRoomProps {
   onGoBack: () => void
-  onJoinRoom: (playerName: string, roomCode: string) => void
+  onJoinRoom: (code: string, playerName: string) => void
 }
 
-export const JoinRoom: FC<JoinRoomProps> = ({ onJoinRoom, onGoBack }) => {
+export const JoinRoom: FC<JoinRoomProps> = ({ onGoBack, onJoinRoom }) => {
   const [playerName, setPlayerName] = useState('')
   const [roomCode, setRoomCode] = useState('')
 
   return (
-    <div className="flex flex-col items-center gap-8 w-full h-full max-w-sm animate-fade-in justify-center px-4 relative animate-fade-in">
-      <RetroButton
-        className="absolute top-6 left-6 md:top-10 md:left-10 !text-lg md:!text-xl !py-1 !px-4"
-        onClick={onGoBack}
-      >
-        &lt; Voltar
-      </RetroButton>
+    <div className="flex flex-col items-center justify-center w-full h-full max-w-2xl mx-auto animate-fade-in relative px-safe-left pt-safe-top pb-safe-bottom">
+      <RotateOverlay />
+      <div className="absolute top-2 left-2 z-10">
+        <RetroButton className="!text-[10px] md:!text-xs !py-1 !px-3 !min-w-0" onClick={onGoBack}>
+          &lt; Voltar
+        </RetroButton>
+      </div>
 
-      <RetroInput
-        placeholder="Your Name"
-        value={playerName}
-        onChange={(e: any) => setPlayerName(e.target.value)}
-      />
+      <div className="flex flex-col w-full max-w-md gap-4 mt-2">
+        <div className="flex flex-col gap-3">
+          <RetroInput
+            placeholder="Seu nome"
+            value={playerName}
+            onChange={(e: any) => setPlayerName(e.target.value)}
+          />
+          <RetroInput
+            placeholder="Código da sala"
+            value={roomCode}
+            onChange={(e: any) => setRoomCode(e.target.value.toUpperCase())}
+          />
+        </div>
 
-      <RetroInput
-        placeholder="Room Code (to join)"
-        value={roomCode}
-        onChange={(e: any) => setRoomCode(e.target.value)}
-      />
-
-      <div className="mt-4">
-        <RetroButton onClick={() => onJoinRoom(playerName, roomCode)}>Join Room</RetroButton>
+        <div className="flex justify-center w-full mt-2">
+          <RetroButton className="!px-12" onClick={() => onJoinRoom(roomCode, playerName)}>
+            Entrar
+          </RetroButton>
+        </div>
       </div>
     </div>
   )

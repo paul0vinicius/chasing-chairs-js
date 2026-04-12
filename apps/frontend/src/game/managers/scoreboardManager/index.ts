@@ -40,7 +40,7 @@ export class ScoreboardManager {
     this.container.add(this.background)
 
     // 4. Título padronizado (Branco, sem amarelo)
-    const title = this.scene.add.text(10, 10, 'SCOREBOARD', {
+    const title = this.scene.add.text(10, 10, 'Placar', {
       fontFamily: 'VT323', // Usando a mesma fonte do Menu
       fontSize: '20px',
       color: '#ffffff',

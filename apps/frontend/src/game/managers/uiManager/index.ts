@@ -18,114 +18,52 @@ export class UIManager {
 
   public showBanner(text: string) {
     const { width, height } = this.scene.scale
-    const banner = this.scene.add
-      .text(width / 2, height * 0.4, text, {
-        fontSize: `${Math.min(width, height) * 0.05}px`,
-        color: '#ffffff',
-        backgroundColor: '#e74c3c',
-        padding: { x: 20, y: 10 },
-        wordWrap: { width: width * 0.8 },
-      })
+
+    // Dimensões responsivas do banner
+    const bannerWidth = width * 0.85
+    const bannerHeight = Math.max(60, height * 0.12)
+    const centerY = height * 0.3 // Fica na parte superior-central da tela
+
+    // 1. A Sombra Dura (Drop Shadow Estilo Retro)
+    const shadow = this.scene.add
+      .rectangle(width / 2 + 6, centerY + 6, bannerWidth, bannerHeight, 0x000000, 1)
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(99)
+
+    // 2. Fundo Translúcido Escuro com Borda Branca Grossa
+    const bg = this.scene.add
+      .rectangle(width / 2, centerY, bannerWidth, bannerHeight, 0x000000, 0.8)
+      .setStrokeStyle(4, 0xffffff, 1)
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(100)
 
+    // 3. O Texto Centralizado com a Fonte Pixelada
+    // IMPORTANTE: Coloque o mesmo nome da font-family que você usa no seu arquivo CSS
+    const bannerText = this.scene.add
+      .text(width / 2, centerY, text.toUpperCase(), {
+        fontFamily: '"Press Start 2P", Courier, monospace', // Ajuste para a sua font-pixel
+        fontSize: `${Math.min(width, height) * 0.045}px`,
+        color: '#ffffff',
+        align: 'center',
+        wordWrap: { width: bannerWidth - 20 },
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(101)
+
+    // 4. Animação de Fade Out que destrói todos os 3 elementos no final
     this.scene.tweens.add({
-      targets: banner,
+      targets: [shadow, bg, bannerText],
       alpha: 0,
       delay: 2000,
       duration: 500,
-      onComplete: () => banner.destroy(),
-    })
-  }
-
-  showGameOverScreen(finalPlayers: Record<string, any>, roomCode: string) {
-    // 1. Descobrir quem é o vencedor (ordenando pelo score)
-    const playersList = Object.values(finalPlayers)
-    playersList.sort((a, b) => b.score - a.score)
-    const winner = playersList[0]
-
-    const { width, height } = this.scene.scale
-    const centerX = width / 2
-    const centerY = height / 2
-
-    // 2. Fundo escuro semi-transparente para focar no menu
-    const overlay = this.scene.add.graphics()
-    overlay.fillStyle(0x000000, 0.85)
-    overlay.fillRect(0, 0, width, height)
-    overlay.setDepth(100)
-
-    // 3. Textos do ecrã
-    const title = this.scene.add
-      .text(centerX, centerY - 100, 'FIM DE JOGO!', {
-        fontSize: '48px',
-        color: '#ffffff',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5)
-      .setDepth(101)
-
-    const winnerText = this.scene.add
-      .text(centerX, centerY - 40, `VENCEDOR: ${winner.name} (${winner.score} pts)`, {
-        fontSize: '32px',
-        color: '#00ff00',
-      })
-      .setOrigin(0.5)
-      .setDepth(101)
-
-    let timeLeft = 10
-    const countdownText = this.scene.add
-      .text(centerX, centerY + 20, `Voltando ao Lobby em ${timeLeft}...`, {
-        fontSize: '24px',
-        color: '#ffaa00',
-      })
-      .setOrigin(0.5)
-      .setDepth(101)
-
-    // 4. Botões de Acção
-    const stayBtn = this.scene.add
-      .text(centerX - 120, centerY + 100, '[ FICAR NA SALA ]', {
-        fontSize: '24px',
-        color: '#00ffff',
-      })
-      .setOrigin(0.5)
-      .setInteractive()
-      .setDepth(101)
-
-    const leaveBtn = this.scene.add
-      .text(centerX + 120, centerY + 100, '[ SAIR ]', {
-        fontSize: '24px',
-        color: '#ff0000',
-      })
-      .setOrigin(0.5)
-      .setInteractive()
-      .setDepth(101)
-
-    // 5. Lógica da Contagem Decrescente (Timer do Phaser)
-    const timer = this.scene.time.addEvent({
-      delay: 1000,
-      callback: () => {
-        timeLeft--
-        countdownText.setText(`Voltando ao Lobby em ${timeLeft}...`)
-
-        if (timeLeft <= 0) {
-          timer.remove()
-          this.leaveRoom() // Acabou o tempo, expulsa para o menu
-        }
+      onComplete: () => {
+        shadow.destroy()
+        bg.destroy()
+        bannerText.destroy()
       },
-      callbackScope: this,
-      loop: true,
-    })
-
-    // 6. Lógica dos Botões
-    stayBtn.on('pointerdown', () => {
-      timer.remove()
-      this.stayInRoom(overlay, [title, winnerText, countdownText, stayBtn, leaveBtn], roomCode)
-    })
-
-    leaveBtn.on('pointerdown', () => {
-      timer.remove()
-      this.leaveRoom()
     })
   }
 

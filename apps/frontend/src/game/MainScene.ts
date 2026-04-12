@@ -11,6 +11,7 @@ import {
   AnimationManager,
 } from './managers'
 import { Player, Chair } from './entitites'
+import { EventBus } from './eventsBus'
 
 export class MainScene extends Scene {
   private gridEngine!: GridEngine
@@ -74,7 +75,27 @@ export class MainScene extends Scene {
     this.setupNetworkEvents()
     this.setupGameEvents()
 
+    const leaveRoomHandler = () => {
+      this.leaveRoom()
+    }
+
+    EventBus.on('leaveRoom', leaveRoomHandler)
+
+    this.events.on('shutdown', () => {
+      EventBus.off('leaveRoom', leaveRoomHandler)
+    })
+
     this.socketHandler.joinRoom(this.currentRoom.code, 'Player')
+  }
+
+  private leaveRoom() {
+    console.log('[Game] Limpando a instância antiga...')
+
+    if (this.uiManager) {
+      this.uiManager.stopMusic()
+    }
+
+    this.scene.start('BootScene')
   }
 
   // Cria um helper para formatar os dados e enviar pro Manager
@@ -189,10 +210,6 @@ export class MainScene extends Scene {
       this.uiManager.stopMusic()
     })
 
-    this.events.on('net:gameOver', (finalPlayers: any) => {
-      this.uiManager.showGameOverScreen(finalPlayers, this.currentRoom.code)
-    })
-
     this.events.on('net:gameRestarted', (players: any) => {
       console.log('[Game] A partida foi reiniciada do zero!')
 
@@ -280,7 +297,7 @@ export class MainScene extends Scene {
   private handleChairTaken(id: string) {
     const isMe = id === this.socketHandler.id
     this.uiManager.showBanner(
-      id === 'RESET' ? 'ROUND RESETTING...' : isMe ? 'YOU WON!' : 'TOO SLOW!'
+      id === 'RESET' ? 'Vamos começar de novo!' : isMe ? 'Você venceu!' : 'Xiii... Lento demais!'
     )
 
     const player = this.players.get(id)

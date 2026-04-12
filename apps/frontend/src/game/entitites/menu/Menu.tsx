@@ -8,14 +8,14 @@ import { EventBus } from '../../eventsBus'
 import { JoinRoom } from './JoinRoom'
 import { RetroButton } from '../../../components'
 
-interface MenuProps {
-  setGameState: Dispatch<SetStateAction<'menu' | 'playing'>>
-}
-
 type MenuState = 'MAIN' | 'CREATE_ROOM' | 'ROOM_READY' | 'ENTER_ROOM' | 'HOW_TO' | 'CREDITS'
 
+interface MenuProps {
+  setGameState: Dispatch<SetStateAction<'menu' | 'playing' | 'game_over'>>
+}
+
 export const Menu: FC<MenuProps> = ({ setGameState }) => {
-  const [currentView, setCurrentView] = useState<MenuState>('MAIN')
+  const [currentView, setCurrentView] = useState<MenuState | undefined>('MAIN')
   const [roomData, setRoomData] = useState<RoomData | undefined>(undefined)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)

@@ -36,6 +36,10 @@ export class MainScene extends Scene {
   init(data: { room: RoomData }) {
     this.currentRoom = data.room
 
+    this.players.clear()
+    this.chair = null
+    this.lastDirectionSent = Direction.NONE
+
     if (this.currentRoom.isMusicPlaying) {
       this.players.forEach((p) => p.dance())
     }

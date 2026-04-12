@@ -36,7 +36,8 @@ export class SocketHandler {
               p.position.x,
               p.position.y,
               p.direction,
-              stateToSend
+              stateToSend,
+              Date.now()
             )
           })
           this.io.to(room.code).emit('s' as any, payload)

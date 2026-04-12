@@ -1,12 +1,6 @@
 import { Scene } from 'phaser'
 import { GridEngine, Direction } from 'grid-engine'
-import {
-  DirectionIdToName,
-  MovePayload,
-  PlayerMapper,
-  RoomData,
-  AnimState,
-} from '@chasing-chairs/shared'
+import { DirectionIdToName, RoomData, AnimState } from '@chasing-chairs/shared'
 import { socket } from './socket'
 import {
   SocketHandler,
@@ -120,66 +114,34 @@ export class MainScene extends Scene {
       this.uiManager.showBanner('A MÚSICA VAI COMEÇAR!')
     })
 
-    this.events.on('net:s', (payload: MovePayload[]) => {
-      payload.forEach((playerData) => {
-        const { id, x, y, dir, anim } = PlayerMapper.deserializeMove(playerData)
+    this.events.on('net:s', (payload: any[]) => {
+      payload.forEach((data) => {
+        const [id, x, y, dirIndex, anim] = data
 
-        // No MainScene.ts -> setupNetworkEvents -> net:s
-        if (id === this.socketHandler.id) {
-          const isMovingLocally = this.gridEngine.isMoving(id)
-          const myPos = this.gridEngine.getPosition(id)
-          const dist = Phaser.Math.Distance.Between(myPos.x, myPos.y, x, y)
+        if (id === this.socketHandler.id) return
 
-          // SÓ corrigimos o jogador local se:
-          // 1. Ele estiver parado (o servidor é a autoridade final do "repouso")
-          // 2. A distância for realmente absurda (> 3 tiles), indicando desync total
-          if (!isMovingLocally && dist > 1) {
-            this.gridEngine.setPosition(id, { x, y })
-          } else if (dist > 3) {
-            console.warn('[Sync] Reconciliação crítica forçada')
-            this.gridEngine.setPosition(id, { x, y })
-          }
-          return
+        const player = this.players.get(id)
+        if (!player) return
+
+        const directionName = DirectionIdToName[dirIndex] as Direction
+        const localPos = this.gridEngine.getPosition(id)
+        const dist = Phaser.Math.Distance.Between(localPos.x, localPos.y, x, y)
+
+        if (dist >= 2) {
+          this.gridEngine.setPosition(id, { x, y })
+        } else if (dist > 0 && directionName === Direction.NONE && !this.gridEngine.isMoving(id)) {
+          this.gridEngine.setPosition(id, { x, y })
         }
 
-        // 2. Garante que o jogador remoto existe na cena
-        if (!this.players.has(id)) {
-          // Se por acaso um novo player entrou e não pegamos o evento de join
-          this.addRemotePlayer(this.currentRoom.players[id])
-          return
+        // 3. MOVIMENTO FLUIDO NATIVO
+        // Se o servidor avisou que o boneco está indo para alguma direção,
+        // apenas passamos o comando para o motor do GridEngine. Ele fará o deslize.
+        if (directionName !== Direction.NONE) {
+          this.gridEngine.move(id, directionName)
         }
 
-        const remotePlayer = this.players.get(id)!
-
-        if (this.gridEngine.hasCharacter(id)) {
-          const directionName = DirectionIdToName[dir] as Direction
-          const serverPos = { x, y }
-
-          // 3. MOVIMENTO SUAVE (Interpolação do GridEngine)
-          // Se o servidor diz que ele está se mexendo, mandamos o GridEngine mover.
-          // O GridEngine cuidará de deslizar o sprite entre os tiles.
-          if (directionName !== Direction.NONE) {
-            this.gridEngine.move(id, directionName)
-          }
-
-          // 4. RECONCILIAÇÃO DE ESTADO (Ajuste de "Ghosting")
-          const currentPos = this.gridEngine.getPosition(id)
-          const dist = Phaser.Math.Distance.Between(
-            currentPos.x,
-            currentPos.y,
-            serverPos.x,
-            serverPos.y
-          )
-
-          // Se a diferença for pequena (ex: < 0.5 tile), ignoramos e deixamos o GridEngine terminar a animação.
-          // Se a diferença for grande (> 1.2 tiles), houve lag pesado, então teleportamos para corrigir.
-          if (dist > 1.2) {
-            this.gridEngine.setPosition(id, serverPos)
-          }
-
-          // 5. ATUALIZAÇÃO DE ANIMAÇÕES (Opcional, baseado no AnimState)
-          this.handleRemoteAnimation(remotePlayer, anim as AnimState)
-        }
+        // 4. ATUALIZA ANIMAÇÃO (Dança, Cadeira, etc)
+        this.handleRemoteAnimation(player, anim as AnimState)
       })
     })
 
@@ -346,6 +308,7 @@ export class MainScene extends Scene {
     if (!myId || !this.players.get(myId)?.canMove) return
 
     let newDirection = Direction.NONE
+
     if (this.cursors.left.isDown || this.uiManager.activeDirection === Direction.LEFT)
       newDirection = Direction.LEFT
     else if (this.cursors.right.isDown || this.uiManager.activeDirection === Direction.RIGHT)
@@ -356,8 +319,6 @@ export class MainScene extends Scene {
       newDirection = Direction.DOWN
 
     if (newDirection !== Direction.NONE) {
-      // SÓ chama o move se o personagem já não estiver se movendo naquela direção
-      // Isso mantém o fluxo do GridEngine muito mais limpo
       if (
         this.gridEngine.getFacingDirection(myId) !== newDirection ||
         !this.gridEngine.isMoving(myId)
@@ -365,7 +326,6 @@ export class MainScene extends Scene {
         this.gridEngine.move(myId, newDirection)
       }
     } else {
-      // Só chama o stop se ele realmente estiver em movimento
       if (this.gridEngine.isMoving(myId)) {
         this.gridEngine.stopMovement(myId)
       }

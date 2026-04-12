@@ -2,6 +2,7 @@ import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import cors from 'cors'
+import customParser from 'socket.io-msgpack-parser'
 
 import { ServerToClientEvents, ClientToServerEvents } from '@chasing-chairs/shared'
 import { RoomManager } from './room/RoomManager'
@@ -10,7 +11,10 @@ import { SocketHandler } from './socket-handler/SocketHandler'
 const app = express()
 app.use(cors())
 const server = createServer(app)
-const io = new Server<ClientToServerEvents, ServerToClientEvents>(server, { cors: { origin: '*' } })
+const io = new Server<ClientToServerEvents, ServerToClientEvents>(server, {
+  cors: { origin: '*' },
+  parser: customParser,
+})
 
 const roomManager = new RoomManager()
 const socketHandler = new SocketHandler(io, roomManager)

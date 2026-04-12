@@ -5,12 +5,20 @@
  * [2] = Y (number - arredondado)
  * [3] = Direção (number/Enum)
  * [4] = Estado de Animação (number/Enum)
+ * [5] = Timestamp
  */
-export type MovePayload = [string, number, number, number, number]
+export type MovePayload = [string, number, number, number, number, number]
 
 export const PlayerMapper = {
-  serializeMove: (id: string, x: number, y: number, dir: number, anim: number): MovePayload => {
-    return [id, Math.round(x), Math.round(y), dir, anim]
+  serializeMove: (
+    id: string,
+    x: number,
+    y: number,
+    dir: number,
+    anim: number,
+    timestamp: number
+  ): MovePayload => {
+    return [id, Math.round(x), Math.round(y), dir, anim, timestamp]
   },
 
   deserializeMove: (data: MovePayload) => {
@@ -20,6 +28,7 @@ export const PlayerMapper = {
       y: data[2],
       dir: data[3],
       anim: data[4],
+      timestamp: data[5],
     }
   },
 }

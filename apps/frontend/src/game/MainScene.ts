@@ -117,7 +117,6 @@ export class MainScene extends Scene {
     this.events.on('net:s', (payload: any[]) => {
       payload.forEach((data) => {
         const [id, x, y, dirIndex, anim] = data
-
         if (id === this.socketHandler.id) return
 
         const player = this.players.get(id)
@@ -125,22 +124,30 @@ export class MainScene extends Scene {
 
         const directionName = DirectionIdToName[dirIndex] as Direction
         const localPos = this.gridEngine.getPosition(id)
+
         const dist = Phaser.Math.Distance.Between(localPos.x, localPos.y, x, y)
 
-        if (dist >= 2) {
-          this.gridEngine.setPosition(id, { x, y })
-        } else if (dist > 0 && directionName === Direction.NONE && !this.gridEngine.isMoving(id)) {
-          this.gridEngine.setPosition(id, { x, y })
+        const BASE_SPEED = 4
+
+        if (dist > 1.5) {
+          this.gridEngine.setSpeed(id, BASE_SPEED * 2)
+        } else if (dist > 0.5) {
+          this.gridEngine.setSpeed(id, BASE_SPEED * 1.5)
+        } else {
+          this.gridEngine.setSpeed(id, BASE_SPEED)
         }
 
-        // 3. MOVIMENTO FLUIDO NATIVO
-        // Se o servidor avisou que o boneco está indo para alguma direção,
-        // apenas passamos o comando para o motor do GridEngine. Ele fará o deslize.
+        // Aplica o movimento da direção recebida
         if (directionName !== Direction.NONE) {
           this.gridEngine.move(id, directionName)
         }
 
-        // 4. ATUALIZA ANIMAÇÃO (Dança, Cadeira, etc)
+        // Se no servidor ele parou (NONE), mas na nossa tela ele não chegou no destino (x,y)
+        // Nós não mandamos parar ainda. Deixamos o GridEngine terminar o trajeto atual.
+        if (directionName === Direction.NONE && dist <= 0.5) {
+          this.gridEngine.setPosition(id, { x, y }) // Snap sutil só no final do repouso
+        }
+
         this.handleRemoteAnimation(player, anim as AnimState)
       })
     })

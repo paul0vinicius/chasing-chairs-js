@@ -87,6 +87,10 @@ export class MainScene extends Scene {
 
     this.events.on('shutdown', () => {
       EventBus.off('leaveRoom', leaveRoomHandler)
+
+      if (this.socketHandler) {
+        this.socketHandler.cleanup()
+      }
     })
 
     this.socketHandler.joinRoom(this.currentRoom.code, 'Player')

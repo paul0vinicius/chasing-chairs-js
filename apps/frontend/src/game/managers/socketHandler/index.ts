@@ -64,6 +64,25 @@ export class SocketHandler {
     this.socket.disconnect()
   }
 
+  cleanup() {
+    this.socket.off('roomCreated')
+    this.socket.off('roomJoined')
+    this.socket.off('gameStarted')
+    this.socket.off('updatedPlayers')
+    this.socket.off('chairSpawned')
+    this.socket.off('chairTaken')
+    this.socket.off('error')
+    this.socket.off('s')
+    this.socket.off('playerJoined')
+    this.socket.off('playerMoved')
+    this.socket.off('playerDisconnected')
+    this.socket.off('musicStarted')
+    this.socket.off('musicStopped')
+    this.socket.off('gameOver')
+    this.socket.off('gameRestarted')
+    this.socket.off('musicStopped')
+  }
+
   get id() {
     return this.socket.id
   }

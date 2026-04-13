@@ -72,49 +72,74 @@ export class UIManager {
     if (isDesktop) return
 
     const { width, height } = this.scene.scale
-    const size = Math.min(width, height) * 0.12
-    const padding = 20 // Distância da borda da tela
+    const size = Math.min(width, height) * 0.15
+    const padding = 20
 
-    // Ponto central exato do D-Pad (ancorado no canto inferior direito)
     const dpadX = width - size * 1.5 - padding
     const dpadY = height - size * 1.5 - padding
 
-    // Distribui os botões em formato de Cruz (+)
     const buttons = [
-      { dir: Direction.UP, x: dpadX, y: dpadY - size },
-      { dir: Direction.DOWN, x: dpadX, y: dpadY + size },
-      { dir: Direction.LEFT, x: dpadX - size, y: dpadY },
-      { dir: Direction.RIGHT, x: dpadX + size, y: dpadY },
+      { dir: Direction.UP, x: dpadX, y: dpadY - size, arrow: '▲' },
+      { dir: Direction.DOWN, x: dpadX, y: dpadY + size, arrow: '▼' },
+      { dir: Direction.LEFT, x: dpadX - size, y: dpadY, arrow: '◀' },
+      { dir: Direction.RIGHT, x: dpadX + size, y: dpadY, arrow: '▶' },
     ]
 
     buttons.forEach((btnConfig) => {
+      const shadow = this.scene.add
+        .rectangle(btnConfig.x + 4, btnConfig.y + 4, size, size, 0x000000, 1)
+        .setScrollFactor(0)
+        .setDepth(999)
+
+      // 2. O Botão
       const btn = this.scene.add
-        .rectangle(btnConfig.x, btnConfig.y, size - 5, size - 5, 0xffffff, 0.2)
+        .rectangle(btnConfig.x, btnConfig.y, size, size, 0x000000, 0.7)
+        .setStrokeStyle(4, 0xffffff)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(1000)
 
-      const arrows: any = { UP: '↑', DOWN: '↓', LEFT: '←', RIGHT: '→' }
-      this.scene.add
-        .text(btnConfig.x, btnConfig.y, arrows[btnConfig.dir], { fontSize: '24px' })
+      const txt = this.scene.add
+        .text(btnConfig.x, btnConfig.y, btnConfig.arrow, {
+          fontFamily: 'Arial, sans-serif',
+          fontSize: `${size * 0.6}px`,
+          color: '#ffffff',
+          align: 'center',
+        })
         .setOrigin(0.5)
         .setScrollFactor(0)
         .setDepth(1001)
 
+      // 4. Lógica de Interação Refinada
       btn.on('pointerdown', () => {
-        btn.setFillStyle(0xffffff, 0.5)
+        // Inversão de cores agressiva
+        btn.setFillStyle(0xffffff, 1)
+        txt.setTint(0x000000) // Usar setTint é mais garantido no Phaser para objetos de texto
+
         this.activeDirection = btnConfig.dir
+
+        // Efeito de feedback visual
+        btn.y = btnConfig.y + 3
+        txt.y = btnConfig.y + 3
+        shadow.alpha = 0 // Esconde a sombra para parecer que encostou no chão
       })
 
-      const stopMovement = () => {
-        btn.setFillStyle(0xffffff, 0.2)
+      const resetBtn = () => {
+        btn.setFillStyle(0x000000, 0.7)
+        txt.clearTint() // Volta para a cor original (branco)
+        txt.setColor('#ffffff')
+
+        btn.y = btnConfig.y
+        txt.y = btnConfig.y
+        shadow.alpha = 1
+
         if (this.activeDirection === btnConfig.dir) {
           this.activeDirection = Direction.NONE
         }
       }
 
-      btn.on('pointerup', stopMovement)
-      btn.on('pointerout', stopMovement)
+      btn.on('pointerup', resetBtn)
+      btn.on('pointerout', resetBtn)
     })
   }
 

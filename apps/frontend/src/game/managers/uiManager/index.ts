@@ -79,10 +79,10 @@ export class UIManager {
     const dpadY = height - size * 1.5 - padding
 
     const buttons = [
-      { dir: Direction.UP, x: dpadX, y: dpadY - size, arrow: '▲' },
-      { dir: Direction.DOWN, x: dpadX, y: dpadY + size, arrow: '▼' },
-      { dir: Direction.LEFT, x: dpadX - size, y: dpadY, arrow: '◀' },
-      { dir: Direction.RIGHT, x: dpadX + size, y: dpadY, arrow: '▶' },
+      { dir: Direction.UP, x: dpadX, y: dpadY - size, arrow: '↑' },
+      { dir: Direction.DOWN, x: dpadX, y: dpadY + size, arrow: '↓' },
+      { dir: Direction.LEFT, x: dpadX - size, y: dpadY, arrow: '←' },
+      { dir: Direction.RIGHT, x: dpadX + size, y: dpadY, arrow: '→' },
     ]
 
     buttons.forEach((btnConfig) => {

@@ -4,11 +4,11 @@ import { RotateOverlay } from './RotateOverlay'
 import { Player } from '@chasing-chairs/shared'
 
 interface GameOverScreenProps {
-  players: Record<string, Player>
   onReturnToMenu: () => void
+  players: Record<string, Player>
 }
 
-export const GameOverScreen: FC<GameOverScreenProps> = ({ players, onReturnToMenu }) => {
+export const GameOverScreen: FC<GameOverScreenProps> = ({ onReturnToMenu, players }) => {
   const sortedPlayers = Object.values(players).sort((a, b) => b.score - a.score)
   const winner = sortedPlayers[0]
 

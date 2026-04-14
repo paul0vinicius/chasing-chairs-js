@@ -274,8 +274,8 @@ export class SocketHandler {
 
       if (!response.ok) return null // Proteção extra contra erro 500 do Deezer
 
-      const data = await response.json()
-      const tracks = data.data
+      const { data } = await response.json()
+      const tracks = (data as any[]).filter((music) => music.duration >= 20)
 
       if (!tracks || tracks.length === 0) return null
 

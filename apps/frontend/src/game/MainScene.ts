@@ -144,6 +144,11 @@ export class MainScene extends Scene {
     })
 
     this.events.on('net:s', (payload: any[]) => {
+      const BASE_SPEED = 4 // Velocidade normal do seu jogo
+      const SNAP_THRESHOLD = 2 // Distância (em tiles) para forçar o teletransporte
+      const ELASTIC_LIMIT = 0.2 // Distância mínima para começar a acelerar o boneco
+      const IDLE_SNAP = 0.1 // Tolerância para o boneco parado
+
       payload.forEach((data) => {
         const [id, x, y, dirIndex, anim] = data
         if (id === this.socketHandler.id) return
@@ -154,29 +159,42 @@ export class MainScene extends Scene {
         const directionName = DirectionIdToName[dirIndex] as Direction
         const localPos = this.gridEngine.getPosition(id)
 
+        // Cálculo da distância Euclidiana entre o cliente e a verdade do servidor
         const dist = Phaser.Math.Distance.Between(localPos.x, localPos.y, x, y)
 
-        const BASE_SPEED = 4
+        // --- LÓGICA DE RECONCILIAÇÃO (HYDRATE) ---
 
-        if (dist > 1.5) {
-          this.gridEngine.setSpeed(id, BASE_SPEED * 2)
-        } else if (dist > 0.5) {
-          this.gridEngine.setSpeed(id, BASE_SPEED * 1.5)
-        } else {
+        // CASO 1: Desync Crítico (O boneco "se perdeu" no labirinto ou deu lag pesado)
+        if (dist > SNAP_THRESHOLD) {
+          this.gridEngine.setPosition(id, { x, y })
           this.gridEngine.setSpeed(id, BASE_SPEED)
         }
 
-        // Aplica o movimento da direção recebida
-        if (directionName !== Direction.NONE) {
+        // CASO 2: O boneco parou no servidor (NONE)
+        else if (directionName === Direction.NONE) {
+          if (!this.gridEngine.isMoving(id) && dist > IDLE_SNAP) {
+            // Se ele parou mas está "torto" no tile, fazemos o hydrate final
+            this.gridEngine.setPosition(id, { x, y })
+          }
+          this.gridEngine.setSpeed(id, BASE_SPEED)
+        }
+
+        // CASO 3: Movimento Normal com Drift (Ajuste Elástico)
+        else {
+          if (dist > ELASTIC_LIMIT) {
+            // Se ele está um pouco atrás, aumentamos a velocidade proporcionalmente
+            // Quanto maior a distância, mais rápido ele corre para alcançar
+            const elasticSpeed = BASE_SPEED * (1 + dist * 0.5)
+            this.gridEngine.setSpeed(id, Math.min(elasticSpeed, BASE_SPEED * 2.5))
+          } else {
+            this.gridEngine.setSpeed(id, BASE_SPEED)
+          }
+
+          // Executa o movimento na direção pretendida
           this.gridEngine.move(id, directionName)
         }
 
-        // Se no servidor ele parou (NONE), mas na nossa tela ele não chegou no destino (x,y)
-        // Nós não mandamos parar ainda. Deixamos o GridEngine terminar o trajeto atual.
-        if (directionName === Direction.NONE && dist <= 0.5) {
-          this.gridEngine.setPosition(id, { x, y }) // Snap sutil só no final do repouso
-        }
-
+        // Sincroniza a animação (SIT, DANCE, etc)
         this.handleRemoteAnimation(player, anim as AnimState)
       })
     })

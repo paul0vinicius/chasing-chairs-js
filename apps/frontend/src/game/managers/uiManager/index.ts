@@ -153,7 +153,7 @@ export class UIManager {
 
     this.currentMusic = new Audio(url)
     this.currentMusic.id = this.musicKey // Atribuímos o ID único ao elemento
-    this.currentMusic.volume = 0.5
+    this.currentMusic.volume = 0.2
 
     console.log(`[Audio] Iniciando música na sala: ${roomCode}`)
 

@@ -114,4 +114,8 @@ export class Player {
   public get canMove() {
     return this._canMove
   }
+
+  public get position() {
+    return this.gridEngine.getPosition(this.id)
+  }
 }

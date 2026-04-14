@@ -199,7 +199,7 @@ export class MainScene extends Scene {
       })
     })
 
-    this.events.on('net:chairTaken', (id: string) => this.handleChairTaken(id))
+    this.events.on('net:chairTaken', (id: string) => this.resolveSitting(id))
     this.events.on('net:playerJoined', (data: any) => {
       this.addRemotePlayer(data)
       this.currentRoom.players[data.id] = data
@@ -291,25 +291,6 @@ export class MainScene extends Scene {
     })
   }
 
-  private checkChairCollision() {
-    if (!this.chair || !this.socketHandler.id) return
-
-    const myPos = this.gridEngine.getPosition(this.socketHandler.id)
-    const chairPos = this.chair.position
-
-    const isAtSameX = Math.round(myPos.x) === Math.round(chairPos.x)
-    const isAtSameY = Math.round(myPos.y) === Math.round(chairPos.y)
-
-    if (isAtSameX && isAtSameY) {
-      console.log('SENTOU!')
-
-      this.socketHandler.sendSat(this.currentRoom.code)
-
-      this.chair.destroy()
-      this.chair = null
-    }
-  }
-
   private handleChairSpawn(pos: { x: number; y: number }) {
     if (this.chair) {
       this.chair.destroy()
@@ -320,20 +301,42 @@ export class MainScene extends Scene {
     console.log(`[Game] Cadeira nasceu em: ${pos.x}, ${pos.y}`)
   }
 
-  private handleChairTaken(id: string) {
-    const isMe = id === this.socketHandler.id
-    this.uiManager.showBanner(
-      id === 'RESET' ? 'Vamos começar de novo!' : isMe ? 'Você venceu!' : 'Xiii... Lento demais!'
-    )
+  private resolveSitting(playerId: string) {
+    const player = this.players.get(playerId)
+    const isMe = playerId === this.socketHandler.id
 
-    const player = this.players.get(id)
-    if (player) {
-      player.sit()
-    }
+    if (!player || !player.canMove) return
+
+    player.sit()
 
     if (this.chair) {
       this.chair.destroy()
       this.chair = null
+
+      this.uiManager.showBanner(
+        playerId === 'RESET'
+          ? 'Vamos começar de novo!'
+          : isMe
+            ? 'Você venceu!'
+            : 'Xiii... Lento demais!'
+      )
+    }
+  }
+
+  private checkChairCollision() {
+    if (!this.chair || !this.socketHandler.id) return
+
+    const player = this.players.get(this.socketHandler.id)
+    const myPos = player?.position // Posição atual do grid
+    const chairPos = this.chair.position
+
+    // Comparação direta de coordenadas de grid (inteiros)
+    if (myPos?.x === chairPos.x && myPos?.y === chairPos.y) {
+      // Otimismo: Senta localmente primeiro para feedback instantâneo
+      this.resolveSitting(this.socketHandler.id)
+
+      // Avisa o servidor
+      this.socketHandler.sendSat(this.currentRoom.code)
     }
   }
 

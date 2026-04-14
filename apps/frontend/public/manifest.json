@@ -4,7 +4,7 @@
   "description": "A aventura da dança das cadeiras está de volta! Entre na sala, dance com Karen e sente na cadeira antes das inimigas.",
   "start_url": "/?mode=standalone",
   "display": "fullscreen",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#1a1a1a",
   "theme_color": "#4a90e2",
   "icons": [

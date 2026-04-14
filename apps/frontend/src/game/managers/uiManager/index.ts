@@ -153,12 +153,11 @@ export class UIManager {
 
     this.currentMusic = new Audio(url)
     this.currentMusic.id = this.musicKey // Atribuímos o ID único ao elemento
+    this.currentMusic.volume = 0.5
 
     console.log(`[Audio] Iniciando música na sala: ${roomCode}`)
 
     this.currentMusic.play().catch(() => {
-      // Tratamento para políticas de Autoplay do Navegador
-      this.showBanner('TAP TO UNMUTE MUSIC')
       this.scene.input.once('pointerdown', () => {
         this.currentMusic?.play()
       })

@@ -17,7 +17,7 @@ The source code is available under the [PolyForm Noncommercial License 1.0.0](./
 
 Any commercial use of this software is **strictly prohibited** without a commercial agreement. This includes publishing the game on official stores (Steam, App Store, Google Play), inserting advertisements, or selling derivative works.
 If you wish to use this engine or code commercially, please reach out to negotiate a Revenue Share / Commercial License:
-📧 Contact: **[SEU EMAIL AQUI]**
+📧 Contact: **pauloviniciusd@gmail.com**
 
 ### 3. Art Assets & Branding
 

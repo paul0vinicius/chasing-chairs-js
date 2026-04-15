@@ -11,6 +11,8 @@ import { RoomManager } from '../room/RoomManager'
 
 export class SocketHandler {
   private readonly TICK_RATE = 50 // 20Hz (um pacote a cada 50ms)
+  private readonly DEFAULT_MUSIC_URL =
+    'https://cdnt-preview.dzcdn.net/api/1/1/f/a/f/0/faf0d340bde5e5a10f3c810bafa8c5a9.mp3?hdnea=exp=1776269149~acl=/api/1/1/f/a/f/0/faf0d340bde5e5a10f3c810bafa8c5a9.mp3*~data=user_id=0,application_id=42~hmac=8eb31f53b5e3e28b9f8c2aa32a630712b1f5420126ff421877eb8fa181f120c4'
 
   constructor(
     private io: Server<ClientToServerEvents, ServerToClientEvents>,
@@ -218,19 +220,12 @@ export class SocketHandler {
     const musicUrl = await this.getRandomMusic()
 
     this.io.to(roomCode).emit('gameStarted', room.players)
-
-    if (musicUrl) {
-      this.io.to(roomCode).emit('musicStarted', { url: musicUrl })
-      room.isMusicPlaying = true
-    } else {
-      room.isMusicPlaying = false
-    }
+    this.io.to(roomCode).emit('musicStarted', { url: musicUrl ?? this.DEFAULT_MUSIC_URL })
+    room.isMusicPlaying = true
 
     const minDelay = 8_000
     const maxDelay = 20_000
     const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay
-
-    // No seu Backend: SocketHandler.ts -> dentro de startRound()
 
     const timeout = setTimeout(() => {
       const currentRoom = this.roomManager.getRoom(roomCode)
@@ -261,6 +256,7 @@ export class SocketHandler {
       'lady gaga mayhem',
       'duda beat tara e tal',
       'carnaval eletronico daniela mercury',
+      'sorbet lsdxoxo remix',
     ]
     const query = queries[Math.floor(Math.random() * queries.length)]
 

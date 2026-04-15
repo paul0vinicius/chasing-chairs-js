@@ -24,7 +24,7 @@ export class ScoreboardManager {
     const safeTop = parseInt(style.getPropertyValue('--fixed-safe-area-top')) || 0
 
     // 2. Posiciona o container somando a margem de segurança (10px + notch)
-    const startX = 10 + safeLeft
+    const startX = 20 + safeLeft
     const startY = 10 + safeTop
 
     this.container = this.scene.add.container(startX, startY)

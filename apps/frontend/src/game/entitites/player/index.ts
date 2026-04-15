@@ -100,6 +100,12 @@ export class Player {
     this.gridEngine.stopMovement(this.id)
   }
 
+  public resetState() {
+    this._canMove = true
+    this.gridEngine.setWalkingAnimationMapping(this.id, WALKING_ANIMATION_MAPPING)
+    this._sprite.stop()
+  }
+
   public setRandomColor(playerOrder: number) {
     const colorIndex = playerOrder % GUEST_COLORS.length
     const tintColor = GUEST_COLORS[colorIndex]

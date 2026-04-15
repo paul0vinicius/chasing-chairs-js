@@ -214,12 +214,16 @@ export class SocketHandler {
     if (!room) return
 
     room.chair.isActive = false
-    this.io.to(roomCode).emit('gameStarted', room.players)
 
     const musicUrl = await this.getRandomMusic()
+
+    this.io.to(roomCode).emit('gameStarted', room.players)
+
     if (musicUrl) {
       this.io.to(roomCode).emit('musicStarted', { url: musicUrl })
-      this.roomManager.getRoom(roomCode).isMusicPlaying = true
+      room.isMusicPlaying = true
+    } else {
+      room.isMusicPlaying = false
     }
 
     const minDelay = 8_000
@@ -236,7 +240,7 @@ export class SocketHandler {
       currentRoom.chair.isActive = true
 
       this.io.to(roomCode).emit('musicStopped')
-      this.roomManager.getRoom(roomCode).isMusicPlaying = false
+      room.isMusicPlaying = false
       this.io.to(roomCode).emit('chairSpawned', currentRoom.chair.position)
 
       SocketHandler.roomTimeouts.delete(roomCode)

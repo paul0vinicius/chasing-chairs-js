@@ -133,6 +133,10 @@ export class MainScene extends Scene {
     this.events.on('net:gameStarted', () => {
       console.log('[Game] Nova rodada iniciada!')
 
+      this.players.forEach((player) => {
+        player.resetState()
+      })
+
       // 1. Limpa a cadeira antiga da tela e da memória
       if (this.chair) {
         this.chair.destroy()
